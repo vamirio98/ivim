@@ -147,7 +147,7 @@ set termguicolors # true color support
 set winminwidth=5
 
 # fold
-exec 'set fillchars=foldopen:,foldclose:,fold:\ ,foldsep:\ ,diff:╱,eob:\ '
+exec 'set fillchars=foldopen:,foldclose:,fold:\ ,foldsep:\ ,diff:╱,eob:\ ,vert:\│'
 set foldlevel=99
 
 set smoothscroll
