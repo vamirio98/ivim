@@ -9,6 +9,7 @@ if !exists('g:ivim_bundle')
     'editor',
     'ui',
     'tags',
+    'utils',
   ]
 endif
 
@@ -134,6 +135,12 @@ if has_key(s_bundle, 'ui')
 
   Plug 'machakann/vim-highlightedyank'
   LoadConf site/bundle/highlightedyank.vim
+endif
+# }}}
+
+# {{{
+if has_key(s_bundle, 'utils')
+  Plug 'dstein64/vim-startuptime'
 endif
 # }}}
 
