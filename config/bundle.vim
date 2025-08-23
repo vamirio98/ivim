@@ -105,6 +105,7 @@ if has_key(s_bundle, 'editor')
   Plug 'tpope/vim-commentary'
   Plug 'tpope/vim-endwise'
   Plug 'tpope/vim-speeddating'
+  Plug 'tpope/vim-unimpaired'
   Plug 'svermeulen/vim-yoink'
   LoadConf site/bundle/yoink.vim
 endif
