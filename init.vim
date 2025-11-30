@@ -18,7 +18,7 @@ endfor
 
 IncScript config/options.vim
 IncScript config/ignores.vim
-IncScript config/bundle.vim
+IncScript config/plug.vim
 IncScript config/keymaps.vim
 IncScript config/autocmds.vim
 

@@ -32,11 +32,21 @@ export class Option
     return (): void => {
       if opt.on == null
         opt.Set(!opt.Get())
-        ui.Info((opt.Get() ? 'enable ' : 'disable ') .. name)
+        if opt.Get()
+          ui.Info('enable ' .. name)
+        else
+          ui.Warn('disable ' .. name)
+        endif
       else
-        exe printf("setlocal %s=%s", name,
-          (opt.Get() == opt.on ? opt.off : opt.on))
-        ui.Info('set ' .. name .. ' = ' .. opt.Get())
+        var en = opt.Get()
+        exec printf("setlocal %s=%s", name,
+          (en == opt.on ? opt.off : opt.on))
+        en = opt.Get()
+        if en == opt.on
+          ui.Info('set ' .. name .. ' = ' .. en)
+        else
+          ui.Warn('set ' .. name .. ' = ' .. en)
+        endif
       endif
     }
   enddef

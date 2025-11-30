@@ -1,6 +1,6 @@
 vim9script
 
-noremap s <Cmd>call stargate#OKvim(1)<CR>
+noremap <localleader>f <Cmd>call stargate#OKvim(1)<CR>
 
 g:stargate_name = 'Master'
 

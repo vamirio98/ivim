@@ -75,14 +75,16 @@ endif
 # move in insert mode.
 inoremap <C-a> <home>
 inoremap <C-e> <end>
-inoremap <C-h> <left>
-inoremap <C-l> <right>
+inoremap <M-h> <left>
+inoremap <M-j> <down>
+inoremap <M-k> <up>
+inoremap <M-l> <right>
 
 # move in command mode.
-cnoremap <C-h> <left>
-cnoremap <C-j> <down>
-cnoremap <C-k> <up>
-cnoremap <C-l> <right>
+cnoremap <M-h> <left>
+cnoremap <M-j> <down>
+cnoremap <M-k> <up>
+cnoremap <M-l> <right>
 cnoremap <C-a> <home>
 cnoremap <C-e> <end>
 

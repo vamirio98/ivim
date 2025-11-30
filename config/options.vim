@@ -163,12 +163,12 @@ g:ivim_rootmarkers = ['.git', '.svn', '.hg', '.root', '.project']
 
 # {{{ ensure all directories is exists
 g:ivim_cache_dir = path.Abspath('~/.cache/vim')
-g:ivim_bundle_home = path.Abspath('~/.vim/bundle')
+g:ivim_plug_home = path.Abspath('~/.vim/plugged')
 g:ivim_swapfile_dir = path.Abspath('~/.cache/vim/swapfiles')
 
 const DIRS = [
   g:ivim_cache_dir,
-  g:ivim_bundle_home,
+  g:ivim_plug_home,
   g:ivim_swapfile_dir,
 ]
 for d in DIRS

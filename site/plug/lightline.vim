@@ -33,8 +33,9 @@ g:lightline.colorscheme = 'gruvbox_material'
 
 g:lightline.active = {
   'left': [ ['mode', 'paste'],
-    ['gitbranch',
-      'coc_error', 'coc_warn', 'lspdiag',
+    [ 'gitbranch',
+      # 'coc_error', 'coc_warn', 'lspdiag',
+      # 'linter_checking', 'linter_errors', 'linter_warnings', 'linter_infos',
       'ivim_filename', 'modified',
     ],
   ],
@@ -57,15 +58,30 @@ g:lightline.component_expand = {
   'gitsummary': "g:IvimStlGitSummary",
   #'lspdiag': 'g:IvimStlLspDiag',
   'gitbranch': 'g:IvimStlGitBranch',
-  'coc_error': 'g:IvimStlCocError',
-  'coc_warn': 'g:IvimStlCocWarn',
+  # 'coc_error': 'g:IvimStlCocError',
+  # 'coc_warn': 'g:IvimStlCocWarn',
+  'linter_checking': 'lightline#ale#checking',
+  'linter_infos': 'lightline#ale#infos',
+  'linter_warnings': 'lightline#ale#warnings',
+  'linter_errors': 'lightline#ale#errors',
 }
 g:lightline.component_type = {
   'buffers': 'tabsel',
   'rtabs': 'tabsel',
   'coc_error': 'error',
   'coc_warn': 'warning',
+  'linter_checking': 'right',
+  'linter_infos': 'right',
+  'linter_warnings': 'warning',
+  'linter_errors': 'error',
 }
+# }}}
+
+# {{{ lightline-ale
+g:lightline#ale#indicator_checking = " "
+g:lightline#ale#indicator_infos = " "
+g:lightline#ale#indicator_warnings = " "
+g:lightline#ale#indicator_errors = " "
 # }}}
 
 # {{{ component utils

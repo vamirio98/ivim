@@ -150,7 +150,7 @@ augroup ivim_ycm
   au FileType c,cpp b:ycm_hover = { 'command': 'GetDoc', 'syntax': &ft, }
   au FileType python b:ycm_hover = { 'command': 'GetHover', 'syntax': &ft, }
   # wait for vim9script lsp
-  au FileType vim nunmap K
+  # au FileType vim nunmap K
   #au FileType vim b:ycm_hover = {'command': 'GetHover', 'syntax': 'help'}
 augroup END
 

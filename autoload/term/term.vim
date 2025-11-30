@@ -1,9 +1,11 @@
 vim9script
 
 import autoload "../lib/platform.vim" as platform
+import autoload "../lib/popup/popup.vim" as popup
 
 export class Term
   var bufnr: number
+  var winnr: number = -1
 
   var shell: string
   var autoclose: bool
@@ -28,10 +30,38 @@ export class Term
     this.win_type = get(opt, 'win_type', g:ivim_term_win_type)
     this.win_pos = get(opt, 'win_pos', g:ivim_term_win_pos)
     this.borderchars = get(opt, 'borderchars', g:ivim_term_borderchars)
+
+    this.bufnr = term_start(this.shell, { 'hidden': 1 })
   enddef
 
-  def Start(): number
-    this.bufnr = term_start(this.shell, {})
-    return this.bufnr
+  def _GenPopupOpt(): dict<any>
+    var opt: dict<any> = {}
+
+    var width = type(this.width) == v:t_number ? this.width : float2nr(this.width * &columns)
+    var height = type(this.height) == v:t_number ? this.height : float2nr(this.height * &lines)
+    opt.minwidth = width
+    opt.maxwidth = width
+    opt.minheight = height
+    opt.maxheight = height
+    opt.pos = this.win_pos
+    opt.borderchars = this.borderchars
+
+    return opt
+  enddef
+
+  def Show(): void
+    if this.win_type == 'popup'
+      if this.winnr == -1
+        this.winnr = popup.Create(this.bufnr, this._GenPopupOpt())
+      endif
+      popup_show(this.winnr)
+    endif
+  enddef
+
+  def Hide(): void
+    if this.win_type == 'popup' && this.winnr != -1
+      popup_close(this.winnr)
+      this.winnr = -1
+    endif
   enddef
 endclass
