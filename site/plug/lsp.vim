@@ -1,7 +1,7 @@
 vim9script
 
-import autoload '../../autoload/module/keymap.vim' as keymap
-import autoload '../../autoload/module/option.vim' as option
+import autoload 'vc/util/keymap.vim'
+import autoload 'vc/util/option.vim'
 type Option = option.Option
 
 var lspOpts = {
@@ -156,7 +156,7 @@ for lsp in defaultLspServers
   endif
 endfor
 
-augroup ivim_lsp
+augroup vc_site_plug_lsp
   au!
   au User LspSetup g:LspOptionsSet(lspOpts)
   au User LspSetup g:LspAddServer(lspServers)

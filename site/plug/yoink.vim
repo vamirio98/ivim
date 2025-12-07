@@ -1,6 +1,6 @@
 vim9script
 
-import autoload "../../autoload/module/keymap.vim" as keymap
+import autoload "vc/util/keymap.vim"
 
 var SetGroup = keymap.SetGroup
 var SetDesc = keymap.SetDesc

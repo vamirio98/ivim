@@ -1,6 +1,6 @@
 vim9script
 
-import autoload "../lib/ui.vim" as ui
+import autoload "../util/notify.vim"
 
 type GetFunc = func(): any
 type SetFunc = func(bool): void
@@ -33,9 +33,9 @@ export class Option
       if opt.on == null
         opt.Set(!opt.Get())
         if opt.Get()
-          ui.Info('enable ' .. name)
+          notify.Info('enable ' .. name)
         else
-          ui.Warn('disable ' .. name)
+          notify.Warn('disable ' .. name)
         endif
       else
         var en = opt.Get()
@@ -43,9 +43,9 @@ export class Option
           (en == opt.on ? opt.off : opt.on))
         en = opt.Get()
         if en == opt.on
-          ui.Info('set ' .. name .. ' = ' .. en)
+          notify.Info('set ' .. name .. ' = ' .. en)
         else
-          ui.Warn('set ' .. name .. ' = ' .. en)
+          notify.Warn('set ' .. name .. ' = ' .. en)
         endif
       endif
     }

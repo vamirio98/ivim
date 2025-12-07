@@ -1,8 +1,8 @@
 vim9script
 
-import autoload "../../autoload/module/keymap.vim" as keymap
-import autoload "../../autoload/lib/ui.vim" as ui
-import autoload "../../autoload/module/plug.vim" as plug
+import autoload "vc/util/keymap.vim"
+import autoload "vc/util/notify.vim"
+import autoload "vc/util/plug.vim"
 
 # {{{ setting
 set noshowmode
@@ -36,7 +36,7 @@ g:lightline.active = {
     [ 'gitbranch',
       # 'coc_error', 'coc_warn', 'lspdiag',
       # 'linter_checking', 'linter_errors', 'linter_warnings', 'linter_infos',
-      'ivim_filename', 'modified',
+      'vc_filename', 'modified',
     ],
   ],
   'right': [ ['lineinfo'], ['percent'],
@@ -49,17 +49,17 @@ g:lightline.tabline = {
 }
 
 g:lightline.component_function = {
-  'ivim_filename': 'g:IvimFilename',
+  'vc_filename': 'g:VcFilename',
 }
 g:lightline.component_expand = {
   'buffers': 'lightline#bufferline#buffers',
   'rtabs': 'g:LightlineTabRight',
-  'gutentags': "g:IvimStlTags",
-  'gitsummary': "g:IvimStlGitSummary",
-  #'lspdiag': 'g:IvimStlLspDiag',
-  'gitbranch': 'g:IvimStlGitBranch',
-  # 'coc_error': 'g:IvimStlCocError',
-  # 'coc_warn': 'g:IvimStlCocWarn',
+  'gutentags': "g:VcStlTags",
+  'gitsummary': "g:VcStlGitSummary",
+  #'lspdiag': 'g:VcStlLspDiag',
+  'gitbranch': 'g:VcStlGitBranch',
+  # 'coc_error': 'g:VcStlCocError',
+  # 'coc_warn': 'g:VcStlCocWarn',
   'linter_checking': 'lightline#ale#checking',
   'linter_infos': 'lightline#ale#infos',
   'linter_warnings': 'lightline#ale#warnings',
@@ -87,12 +87,12 @@ g:lightline#ale#indicator_errors = " "
 # {{{ component utils
 # {{{ setup color group
 def SetupColor()
-  hi! link IvimStlA LightlineLeft_normal_0
-  hi! link IvimStlB LightlineLeft_normal_1
-  hi! link IvimStlC LightlineRight_normal_2
-  hi! link IvimStlX LightlineRight_normal_2
-  hi! link IvimStlY LightlineRight_normal_1
-  hi! link IvimStlZ LightlineRight_normal_0
+  hi! link VcStlA LightlineLeft_normal_0
+  hi! link VcStlB LightlineLeft_normal_1
+  hi! link VcStlC LightlineRight_normal_2
+  hi! link VcStlX LightlineRight_normal_2
+  hi! link VcStlY LightlineRight_normal_1
+  hi! link VcStlZ LightlineRight_normal_0
 
   SetupStlGitSumColor()
   SetupStlLspDiagColor()
@@ -119,7 +119,7 @@ enddef
 # }}}
 
 # tags {{{ #
-def g:IvimStlTags(): string
+def g:VcStlTags(): string
   return gutentags#statusline('[R] ', '', 'tags')
 enddef
 # }}} tags #
@@ -132,7 +132,7 @@ enddef
 # }}}
 
 # {{{ filename
-def g:IvimFilename(): string
+def g:VcFilename(): string
   var fn = expand('%')
   if &ft == 'dirvish'
     return fn == '/' ? fn : fnamemodify(fn, ':h:t')
@@ -146,66 +146,66 @@ enddef
 
 # {{{ git summary
 def SetupStlGitSumColor(): void
-  NewHighlight('IvimStlGitSumAdd', 'IvimStlX', 'GitGutterAdd')
-  NewHighlight('IvimStlGitSumChange', 'IvimStlX', 'GitGutterChange')
-  NewHighlight('IvimStlGitSumDelete', 'IvimStlX', 'GitGutterDelete')
+  NewHighlight('VcStlGitSumAdd', 'VcStlX', 'GitGutterAdd')
+  NewHighlight('VcStlGitSumChange', 'VcStlX', 'GitGutterChange')
+  NewHighlight('VcStlGitSumDelete', 'VcStlX', 'GitGutterDelete')
 enddef
 
-def g:IvimStlGitSummary(): string
+def g:VcStlGitSummary(): string
   var [a, m, r] = g:GitGutterGetHunkSummary()
   return printf('%s%s%s%s%s',
-    (a == 0 ? '' : printf('%%#IvimStlGitSumAdd#+%%(%d%%)%%*', a)),
+    (a == 0 ? '' : printf('%%#VcStlGitSumAdd#+%%(%d%%)%%*', a)),
     (m + r > 0 ? ' ' : ''),
-    (m == 0 ? '' : printf('%%#IvimStlGitSumChange#~%%(%d%%)%%*', m)),
+    (m == 0 ? '' : printf('%%#VcStlGitSumChange#~%%(%d%%)%%*', m)),
     (m > 0 && r > 0 ? ' ' : ''),
-    (r == 0 ? '' : printf('%%#IvimStlGitSumDelete#-%%(%d%%)%%*', r))
+    (r == 0 ? '' : printf('%%#VcStlGitSumDelete#-%%(%d%%)%%*', r))
   )
 enddef
 # }}}
 
 # {{{ git branch
 def SetupStlGitBranchColor(): void
-  NewHighlight('IvimStlGitBranch', 'IvimStlB', 'Blue')
+  NewHighlight('VcStlGitBranch', 'VcStlB', 'Blue')
 enddef
-def g:IvimStlGitBranch(): string
+def g:VcStlGitBranch(): string
   if &ft == 'dirvish'
     return ''
   else
     var br = g:FugitiveHead()
     return len(br) == 0 ? '' :
-      printf('%%#IvimStlGitBranch# %%(%s%%)%%#IvimStlB#', br)
+      printf('%%#VcStlGitBranch# %%(%s%%)%%#VcStlB#', br)
   endif
 enddef
 # }}}
 
 # {{{ lsp diag
 def SetupStlLspDiagColor(): void
-  NewHighlight('IvimStlLspDiagError', 'IvimStlB', 'Red')
-  NewHighlight('IvimStlLspDiagWarn', 'IvimStlB', 'Yellow')
+  NewHighlight('VcStlLspDiagError', 'VcStlB', 'Red')
+  NewHighlight('VcStlLspDiagWarn', 'VcStlB', 'Yellow')
 enddef
-def g:IvimStlLspDiag(): string
+def g:VcStlLspDiag(): string
   if plug.Has('YouCompleteMe')
     var error = youcompleteme#GetErrorCount()
     var warn = youcompleteme#GetWarningCount()
     return printf('%s%s%s',
       (error == 0 ? '' :
-        '%#IvimStlLspDiagError# ' .. string(error) .. '%#IvimStlB#'),
+        '%#VcStlLspDiagError# ' .. string(error) .. '%#VcStlB#'),
       (error > 0 && warn > 0 ? ' ' : ''),
       (warn == 0 ? '' :
-        '%#IvimStlLspDiagWarn# ' .. string(warn) .. '%#IvimStlB#')
+        '%#VcStlLspDiagWarn# ' .. string(warn) .. '%#VcStlB#')
     )
   endif
 enddef
 # }}}
 
 # {{{ coc-status
-def g:IvimStlCocError(): string
+def g:VcStlCocError(): string
   var error_sign: string = get(g:, 'coc_status_error_sign', ' ')
   var info = get(b:, 'coc_diagnostic_info', {})
   var error_num: number = get(info, 'error', 0)
   return error_num == 0 ? '' : printf("%s%d", error_sign, error_num)
 enddef
-def g:IvimStlCocWarn(): string
+def g:VcStlCocWarn(): string
   var warn_sign: string = get(g:, 'coc_status_warning_sign', ' ')
   var info = get(b:, 'coc_diagnostic_info', {})
   var warn_num: number = get(info, 'warning', 0)
@@ -240,7 +240,7 @@ nmap <leader>br <Plug>lightline#bufferline#reset_order()
 SetDesc('<leader>br', 'Reorder')
 # }}}
 
-augroup ivim_lightline
+augroup vc_site_plug_lightline
   au!
   # wait for colorscheme loaded
   au VimEnter * SetupColor()
@@ -264,6 +264,6 @@ augroup ivim_lightline
       lightline#bufferline#reload()
     enddef
     au BufDelete * if timer_start(200, function('ReloadBufline')) == -1
-      | ui.Error('cannot refresh bufferline') | endif
+      | notify.Error('cannot refresh bufferline') | endif
   endif
 augroup END

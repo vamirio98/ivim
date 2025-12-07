@@ -9,7 +9,7 @@ g:floaterm_width = 0.5
 # Close window if the job exits normally
 g:floaterm_autoclose = 1
 # Kill all floaterm instance when quit vim.
-augroup ivim_floaterm
+augroup vc_site_plug_floaterm
   au!
   au QuitPre * exec 'FloatermKill!'
 augroup END

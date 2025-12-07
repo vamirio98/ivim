@@ -1,8 +1,8 @@
 vim9script
 
-import autoload "../../autoload/lib/ui.vim" as ui
+import autoload 'vc/util/notify.vim'
 
-g:ivim_dirvish_hide_dotfile = get(g:, 'ivim_dirvish_hide_dotfile', 1)
+g:vc_dirvish_hide_dotfile = get(g:, 'vc_dirvish_hide_dotfile', 1)
 
 # sort and hide files, then locate related file
 def SetupDirvish()
@@ -11,7 +11,7 @@ def SetupDirvish()
   # when reenter the same buffer. e.g., toggle hide dot-file or files in
   # a directory have changed
   b:cur_file = get(b:, 'cur_file', getline('.'))
-  if g:ivim_dirvish_hide_dotfile
+  if g:vc_dirvish_hide_dotfile
     exec 'silent! keeppatterns g@\v[\/]\.[^\/]+[\/]?$@d _'
     # add current file again if it's dotfile
     if match(b:cur_file, '\v[\/]\.[^\/]+[\/]?$') >= 0
@@ -28,12 +28,12 @@ def SetupDirvish()
 enddef
 
 def ToggleHideDotfile()
-  g:ivim_dirvish_hide_dotfile = !g:ivim_dirvish_hide_dotfile
-  ui.Info(printf('%s dot files', g:ivim_dirvish_hide_dotfile ? 'Hide' : 'Show'))
+  g:vc_dirvish_hide_dotfile = !g:vc_dirvish_hide_dotfile
+  notify.Info(printf('%s dot files', g:vc_dirvish_hide_dotfile ? 'Hide' : 'Show'))
   exec 'Dirvish'
 enddef
 
-augroup ivim_dirvish
+augroup vc_site_plug_dirvish
   au!
   au FileType dirvish SetupDirvish()
   au BufLeave * if &ft == 'dirvish' && exists('b:cur_file')

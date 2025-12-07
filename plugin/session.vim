@@ -5,21 +5,21 @@ if exists('g:isession_loaded')
 endif
 g:isession_loaded = 1
 
-import autoload "../autoload/lib/core.vim" as core
-import autoload "../autoload/lib/path.vim" as path
-import autoload "../autoload/lib/project.vim" as project
-import autoload "../autoload/lib/ui.vim" as ui
-import autoload "../autoload/module/plug.vim" as plug
-import autoload "../autoload/module/keymap.vim" as keymap
+import autoload "vc/util/interact.vim"
+import autoload "vc/util/path.vim"
+import autoload "vc/util/project.vim"
+import autoload "vc/util/notify.vim"
+import autoload "vc/util/plug.vim"
+import autoload "vc/util/keymap.vim"
 
-g:ivim_cache_dir = get(g:, 'ivim_cache_dir', resolve(expand('~/.cache/vim')))
-g:ivim_session_dir = get(g:, 'ivim_session_dir',
-  path.Join(g:ivim_cache_dir, 'session'))
+g:vc_cache_dir = get(g:, 'vc_cache_dir', resolve(expand('~/.cache/vim')))
+g:vc_session_dir = get(g:, 'vc_session_dir',
+  path.Join(g:vc_cache_dir, 'session'))
 # auto update session when leave vim
-g:ivim_auto_update_session = get(g:, 'ivim_auto_update_session', 1)
+g:vc_auto_update_session = get(g:, 'vc_auto_update_session', 1)
 
-var s_session_dir = resolve(expand(g:ivim_session_dir))
-var s_auto_update_session = g:ivim_auto_update_session
+var s_session_dir = resolve(expand(g:vc_session_dir))
+var s_auto_update_session = g:vc_auto_update_session
 
 def g:SessionList(arglead: string, ..._): list<string>
   if !isdirectory(s_session_dir)
@@ -43,31 +43,31 @@ def g:SessionSave(bang: bool = false, name: string = null_string,
     silent: bool = false): void
   # ensure session directory exists
   if !isdirectory(s_session_dir)
-    var choice: number = core.Confirm(
+    var choice: number = interact.Confirm(
       s_session_dir .. ' is not exists, create it?', "&Yes\n&No", 1)
     if choice == 1
       silent mkdir(s_session_dir, 'p')
     else
-      ui.Error('The session directory does not exist: ' .. s_session_dir)
+      notify.Error('The session directory does not exist: ' .. s_session_dir)
       return
     endif
   endif
 
   var new_name: string = name
   if new_name == null
-    new_name = core.Input('Session name: ',
+    new_name = interact.Input('Session name: ',
       fnamemodify(project.CurRoot(), ':t'), 'customlist,g:SessionList'
     )
   endif
   if empty(new_name)
-    ui.Error('Need session name')
+    notify.Error('Need session name')
     return
   endif
 
   var file: string = path.Join(s_session_dir, new_name)
 
   if filereadable(file) && !bang
-    var choice: number = core.Confirm(
+    var choice: number = interact.Confirm(
       new_name .. ' is already exist, overwrite?', "&Yes\n&No", 2)
     if choice != 1
       return
@@ -77,7 +77,7 @@ def g:SessionSave(bang: bool = false, name: string = null_string,
   WriteSessionFile(new_name)
 
   if !silent
-    ui.Info('Saved session [' .. new_name .. ']')
+    notify.Info('Saved session [' .. new_name .. ']')
   endif
 enddef
 
@@ -86,22 +86,22 @@ enddef
 def g:SessionLoad(load_last_session: bool = false, name: string = null_string,
     silent: bool = false): void
   if !isdirectory(s_session_dir)
-    ui.Error('The session direcotry does not exist: ' .. s_session_dir)
+    notify.Error('The session direcotry does not exist: ' .. s_session_dir)
     return
   endif
 
   var new_name: string = name
   if new_name == null
-    new_name = core.Input('Session name: ', '', 'customlist,g:SessionList')
+    new_name = interact.Input('Session name: ', '', 'customlist,g:SessionList')
   endif
   if empty(new_name)
-    ui.Error('Need session name')
+    notify.Error('Need session name')
     return
   endif
 
   var file: string = path.Join(s_session_dir, new_name)
   if !filereadable(file)
-    ui.Error('The session file does not exist: ' .. file)
+    notify.Error('The session file does not exist: ' .. file)
     return
   endif
 
@@ -109,7 +109,7 @@ def g:SessionLoad(load_last_session: bool = false, name: string = null_string,
   bufdo bd
   exec 'source' file
   if !silent
-    ui.Info('Loaded session [' .. new_name .. ']')
+    notify.Info('Loaded session [' .. new_name .. ']')
   endif
 enddef
 
@@ -117,26 +117,26 @@ enddef
 def g:SessionDelete(bang: bool = false, name: string = null_string,
     silent: bool = false): void
   if !isdirectory(s_session_dir)
-    ui.Error('The session direcotry does not exist: ' .. s_session_dir)
+    notify.Error('The session direcotry does not exist: ' .. s_session_dir)
     return
   endif
 
   var new_name: string = name
   if new_name == null
-    new_name = core.Input('Session name: ', '', 'customlist,g:SessionList')
+    new_name = interact.Input('Session name: ', '', 'customlist,g:SessionList')
   endif
   if empty(new_name)
-    ui.Error('Need session name')
+    notify.Error('Need session name')
     return
   endif
 
   var file: string = path.Join(s_session_dir, new_name)
   if !filereadable(file)
-    ui.Error('No such file: ' .. file)
+    notify.Error('No such file: ' .. file)
     return
   endif
   if !bang
-    var choice: number = core.Confirm(
+    var choice: number = interact.Confirm(
       'Delete session ' .. new_name .. '?', "&Yes\n&No", 2)
     if choice != 1
       return
@@ -144,7 +144,7 @@ def g:SessionDelete(bang: bool = false, name: string = null_string,
   endif
   delete(file)
   if !silent
-    ui.Warn('Delete session [' .. new_name .. ']')
+    notify.Warn('Delete session [' .. new_name .. ']')
   endif
 enddef
 
@@ -157,17 +157,17 @@ def g:SessionClose(): void
 enddef
 
 command! -nargs=? -bar -bang -complete=customlist,g:SessionList
-      \ IvimSessionSave g:SessionSave(<bang>0, <f-args>)
+      \ VcSessionSave g:SessionSave(<bang>0, <f-args>)
 command! -nargs=? -bar -bang -complete=customlist,g:SessionList
-      \ IvimSessionLoad g:SessionLoad(<bang>0, <f-args>)
+      \ VcSessionLoad g:SessionLoad(<bang>0, <f-args>)
 command! -nargs=? -bar -bang -complete=customlist,g:SessionList
-      \ IvimSessionDelete g:SessionDelete(<bang>0, <f-args>)
-command! -nargs=0 -bar IvimSessionClose g:SessionClose()
-command! -nargs=0 IvimRoot ui.Info(project.CurRoot())
+      \ VcSessionDelete g:SessionDelete(<bang>0, <f-args>)
+command! -nargs=0 -bar VcSessionClose g:SessionClose()
+command! -nargs=0 VcRoot notify.Info(project.CurRoot())
 
-augroup ivim_plugin_isession
+augroup vc_plugin_session
   au!
-  au VimLeavePre * if g:ivim_auto_update_session &&
+  au VimLeavePre * if g:vc_auto_update_session &&
         \ exists('v:this_session') && filewritable(v:this_session)
     | WriteSessionFile(fnameescape(v:this_session)) | endif
 augroup END

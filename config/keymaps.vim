@@ -1,9 +1,9 @@
 vim9script
 
-import autoload "../autoload/lib/ui.vim" as ui
-import autoload "../autoload/module/option.vim" as option
-import autoload "../autoload/module/keymap.vim" as keymap
-import autoload "../autoload/module/utils.vim" as utils
+import autoload 'vc/util/notify.vim'
+import autoload 'vc/util/option.vim'
+import autoload 'vc/util/keymap.vim'
+import autoload 'vc/misc/buffer.vim'
 
 # {{{ make sure function work normally
 # set Alt and function key in terminal
@@ -21,53 +21,53 @@ set ttimeout
 set ttimeoutlen=50
 
 if $TMUX != ''
-  set ttimeoutlen=30
+    set ttimeoutlen=30
 elseif &ttimeoutlen > 80 || &ttimeoutlen <= 0
-  set ttimeoutlen=80
+    set ttimeoutlen=80
 endif
 # use ALT in terminal, should set ttimeout and ttimeoutlen at first
 # refer: http://www.skywind.me/blog/archives/2021
 if has('gui_running') == 0
-  def SetMetacode(key: string)
-    exec "set <M-" .. key .. ">=\e" .. key
-    exec "imap \e" .. key .. " <M-" .. key .. ">"
-  enddef
-  for i in range(10)
-    SetMetacode(nr2char(char2nr('0') + i))
-  endfor
-  for i in range(26)
-    SetMetacode(nr2char(char2nr('a') + i))
-    SetMetacode(nr2char(char2nr('A') + i))
-  endfor
-  for c in [',', '.', '/', ';', '{', '}']
-    SetMetacode(c)
-  endfor
-  for c in ['?', ':', '-', '_', '+', '=', "'"]
-    SetMetacode(c)
-  endfor
+    def SetMetacode(key: string)
+        exec $'set <M-{key}>=\e{key}'
+        exec $'imap \e{key} <M-{key}>'
+    enddef
+    for i in range(10)
+        SetMetacode(nr2char(char2nr('0') + i))
+    endfor
+    for i in range(26)
+        SetMetacode(nr2char(char2nr('a') + i))
+        SetMetacode(nr2char(char2nr('A') + i))
+    endfor
+    for c in [',', '.', '/', ';', '{', '}']
+        SetMetacode(c)
+    endfor
+    for c in ['?', ':', '-', '_', '+', '=', "'"]
+        SetMetacode(c)
+    endfor
 endif
 
 # use function key in terminal
 def SetFunctionKey(name: string, code: string)
-  exec "set " .. name .. "=\e" .. code
+    exec $'set {name}=\e{code}'
 enddef
 if has('gui_running') == 0
-  SetFunctionKey('<F1>', 'OP')
-  SetFunctionKey('<F2>', 'OQ')
-  SetFunctionKey('<F3>', 'OR')
-  SetFunctionKey('<F4>', 'OS')
-  SetFunctionKey('<S-F1>', '[1;2P')
-  SetFunctionKey('<S-F2>', '[1;2Q')
-  SetFunctionKey('<S-F3>', '[1;2R')
-  SetFunctionKey('<S-F4>', '[1;2S')
-  SetFunctionKey('<S-F5>', '[15;2~')
-  SetFunctionKey('<S-F6>', '[17;2~')
-  SetFunctionKey('<S-F7>', '[18;2~')
-  SetFunctionKey('<S-F8>', '[19;2~')
-  SetFunctionKey('<S-F9>', '[20;2~')
-  SetFunctionKey('<S-F10>', '[21;2~')
-  SetFunctionKey('<S-F11>', '[23;2~')
-  SetFunctionKey('<S-F12>', '[24;2~')
+    SetFunctionKey('<F1>', 'OP')
+    SetFunctionKey('<F2>', 'OQ')
+    SetFunctionKey('<F3>', 'OR')
+    SetFunctionKey('<F4>', 'OS')
+    SetFunctionKey('<S-F1>', '[1;2P')
+    SetFunctionKey('<S-F2>', '[1;2Q')
+    SetFunctionKey('<S-F3>', '[1;2R')
+    SetFunctionKey('<S-F4>', '[1;2S')
+    SetFunctionKey('<S-F5>', '[15;2~')
+    SetFunctionKey('<S-F6>', '[17;2~')
+    SetFunctionKey('<S-F7>', '[18;2~')
+    SetFunctionKey('<S-F8>', '[19;2~')
+    SetFunctionKey('<S-F9>', '[20;2~')
+    SetFunctionKey('<S-F10>', '[21;2~')
+    SetFunctionKey('<S-F11>', '[23;2~')
+    SetFunctionKey('<S-F12>', '[24;2~')
 endif
 # }}}
 
@@ -97,8 +97,8 @@ nnoremap <M-l> <C-w>l
 
 # terminal
 if has('terminal') && exists(':terminal') == 2 && has('patch-8.1.1')
-  set termwinkey=<C-_>
-  tnoremap <esc><esc> <C-\><C-n>
+    set termwinkey=<C-_>
+    tnoremap <esc><esc> <C-\><C-n>
 endif
 
 type Option = option.Option
@@ -141,10 +141,10 @@ nnoremap <leader>bb <Cmd>e #<CR>
 SetDesc('<leader>bb', 'Switch to Other Buffer')
 
 # delete buffer
-nnoremap <leader>bd <ScriptCmd>utils.BufDel()<CR>
+nnoremap <leader>bd <ScriptCmd>buffer.BufDel()<CR>
 SetDesc('<leader>bd', 'Delete Buffer')
 # delete other buffers
-nnoremap <leader>bo <ScriptCmd>utils.BufDelOther()<CR>
+nnoremap <leader>bo <ScriptCmd>buffer.BufDelOther()<CR>
 SetDesc('<leader>bo', 'Delete Other Buffers')
 # delete buffer and window
 nnoremap <leader>bD <cmd>:bd<cr>
@@ -193,13 +193,13 @@ SetDesc('<leader>fn', 'New File')
 SetGroup('<leader>x', 'location')
 # location list
 def ToggleLocList(): void
-  var ll = getloclist(bufnr('%'))
-  if len(ll) == 0
-    ui.Warn('location list is empty')
-    lclose
-  else
-    lopen
-  endif
+    var ll = getloclist(bufnr('%'))
+    if len(ll) == 0
+        notify.Warn('location list is empty')
+        lclose
+    else
+        lopen
+    endif
 enddef
 nnoremap <leader>xl <ScriptCmd>ToggleLocList()<CR>
 SetDesc('<leader>xl', 'Toggle Location List')
@@ -207,13 +207,13 @@ SetDesc('<leader>xl', 'Toggle Location List')
 SetGroup('<leader>x', 'quickfix')
 # quickfix list
 def ToggleQfList(): void
-  var qf = getqflist({'bufnr': bufnr('%')})
-  if len(qf) == 0
-    ui.Warn('quickfix list is empty')
-    cclose
-  else
-    copen
-  endif
+    var qf = getqflist({'bufnr': bufnr('%')})
+    if len(qf) == 0
+        notify.Warn('quickfix list is empty')
+        cclose
+    else
+        copen
+    endif
 enddef
 nnoremap <leader>xq <ScriptCmd>ToggleQfList()<CR>
 SetDesc('<leader>xq', 'Toggle QuickFix List')
@@ -239,14 +239,14 @@ nnoremap <leader>uL <ScriptCmd>relativenumber.Toggle()<CR>
 SetDesc('<leader>uL', 'Toggle Relative Line No')
 
 def SetLineNo(enable: bool): void
-  b:ivim_rnu = get(b:, 'ivim_rnu', &relativenumber)
-  if !enable
-    b:ivim_rnu = &relativenumber
-    setlocal norelativenumber
-  else
-    exec 'setlocal' (b:ivim_rnu ? '' : 'no') .. 'relativenumber'
-  endif
-  setlocal number!
+    b:vc_rnu = get(b:, 'vc_rnu', &relativenumber)
+    if !enable
+        b:vc_rnu = &relativenumber
+        setlocal norelativenumber
+    else
+        exec 'setlocal' (b:vc_rnu ? '' : 'no') .. 'relativenumber'
+    endif
+    setlocal number!
 enddef
 var number = Option.new('number', v:none, SetLineNo)
 nnoremap <leader>ul <ScriptCmd>number.Toggle()<CR>
@@ -263,16 +263,16 @@ SetDesc('<leader>uC', 'Toggle Color Column')
 # {{{ toggle paste mode
 # set filetype to empty to avoid vim format paste content
 def TogglePasteMode(): void
-  var paste: bool = &paste
-  if !paste
-    b:ivim_original_filetype = &ft
-    set paste
-    set ft=
-  else
-    exe 'set ft=' .. b:ivim_original_filetype
-    set nopaste
-    unlet b:ivim_original_filetype
-  endif
+    var paste: bool = &paste
+    if !paste
+        b:vc_original_filetype = &ft
+        set paste
+        set ft=
+    else
+        exec 'set ft=' .. b:vc_original_filetype
+        set nopaste
+        unlet b:vc_original_filetype
+    endif
 enddef
 nnoremap <leader>up <ScriptCmd>TogglePasteMode()<CR>
 SetDesc('<leader>up', 'Toggle Paste Mode')
@@ -294,33 +294,33 @@ SetDesc('<leader>wd', 'Close Window')
 # toggle window maximize {{{
 # https://github.com/szw/vim-maximizer/blob/master/plugin/maximizer.vim
 def MaximizeWin(): void
-  t:ivim_restore_win = {'before': winrestcmd()}
-  vert resize | resize
-  t:ivim_restore_win.after = winrestcmd()
-  normal! ze
+    t:vc_restore_win = {'before': winrestcmd()}
+    vert resize | resize
+    t:vc_restore_win.after = winrestcmd()
+    normal! ze
 enddef
 def RestoreWin(): void
-  if exists('t:ivim_restore_win')
-    silent! exec t:ivim_restore_win.before
-    if t:ivim_restore_win.before != winrestcmd()
-      exec "wincmd ="
+    if exists('t:vc_restore_win')
+        silent! exec t:vc_restore_win.before
+        if t:vc_restore_win.before != winrestcmd()
+            exec "wincmd ="
+        endif
+        unlet t:vc_restore_win
+        normal! ze
     endif
-    unlet t:ivim_restore_win
-    normal! ze
-  endif
 enddef
 def ToggleWinMax()
-  if exists('t:ivim_restore_win') && t:ivim_restore_win.after == winrestcmd()
-    RestoreWin()
-  elseif winnr('$') > 1
-    MaximizeWin()
-  endif
+    if exists('t:vc_restore_win') && t:vc_restore_win.after == winrestcmd()
+        RestoreWin()
+    elseif winnr('$') > 1
+        MaximizeWin()
+    endif
 enddef
 nnoremap <leader>um <ScriptCmd>ToggleWinMax()<CR>
 SetDesc('<leader>um', 'Toggle Win Maximize')
-augroup ivim_restore_maximize_win_on_winleave
-  au!
-  au WinLeave * RestoreWin()
+augroup VcConfigKeymapRestoreMaximizeWinOnWinleave
+    au!
+    au WinLeave * RestoreWin()
 augroup END
 # }}}
 
@@ -350,31 +350,30 @@ SetDesc(']<Tab>', 'Next Tab')
 nnoremap <expr> <C-F> <SID>ScrollCursorPopup(true) ? '<esc>' : '<C-F>'
 nnoremap <expr> <C-B> <SID>ScrollCursorPopup(false) ? '<esc>' : '<C-B>'
 def FindCursorPopup(radius: number = 2): number
-  var srow: number = screenrow()
-  var scol: number = screencol()
+    var srow: number = screenrow()
+    var scol: number = screencol()
 
-  # it's necessary to test entire rect, as some popup might be quite small
-  for r in range(srow - radius, srow + radius)
-    for c in range(scol - radius, scol + radius)
-      var winid: number = popup_locate(r, c)
-      if winid != 0
-        return winid
-      endif
+    # it's necessary to test entire rect, as some popup might be quite small
+    for r in range(srow - radius, srow + radius)
+        for c in range(scol - radius, scol + radius)
+            var winid: number = popup_locate(r, c)
+            if winid != 0
+                return winid
+            endif
+        endfor
     endfor
-  endfor
 
-  return 0
+    return 0
 enddef
 
 def ScrollCursorPopup(down: bool): bool
-  var winid: number = FindCursorPopup()
-  if winid == 0
-    return false
-  endif
+    var winid: number = FindCursorPopup()
+    if winid == 0
+        return false
+    endif
 
-  var pp = popup_getpos(winid)
-  popup_setoptions( winid, {'firstline': pp.firstline + ( down ? 4 : -4 ) } )
-
-  return true
+    var pp = popup_getpos(winid)
+    popup_setoptions( winid, {'firstline': pp.firstline + ( down ? 4 : -4 ) } )
+    return true
 enddef
 # }}}

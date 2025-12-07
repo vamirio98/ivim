@@ -1,7 +1,7 @@
 vim9script
 
-import autoload "../../autoload/module/keymap.vim" as keymap
-import autoload "../../autoload/lib/core.vim" as core
+import autoload "vc/util/keymap.vim"
+import autoload "vc/util/core.vim"
 
 # install {{{ #
 var clangd: string = core.Executable('clangd')
@@ -145,7 +145,7 @@ for lsp in LSP
 endfor
 ## }}}
 
-augroup ivim_ycm
+augroup vc_site_plug_ycm
   au!
   au FileType c,cpp b:ycm_hover = { 'command': 'GetDoc', 'syntax': &ft, }
   au FileType python b:ycm_hover = { 'command': 'GetHover', 'syntax': &ft, }
@@ -154,7 +154,7 @@ augroup ivim_ycm
   #au FileType vim b:ycm_hover = {'command': 'GetHover', 'syntax': 'help'}
 augroup END
 
-#command! -nargs=0 IvimLspRestart exec 'YcmRestartServer'
-#command! -nargs=0 IvimLspRefresh exec 'YcmForceCompileAndDiagnostics'
-#command! -nargs=0 IvimShowDiags  FindDiag()
-#command! -nargs=0 IvimShowLspLog exec 'YcmDebugInfo'
+#command! -nargs=0 VcLspRestart exec 'YcmRestartServer'
+#command! -nargs=0 VcLspRefresh exec 'YcmForceCompileAndDiagnostics'
+#command! -nargs=0 VcShowDiags  FindDiag()
+#command! -nargs=0 VcShowLspLog exec 'YcmDebugInfo'

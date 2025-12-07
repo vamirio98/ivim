@@ -4,7 +4,7 @@ vim9script
 # for snippet
 g:UltiSnipsSnippetDirectories = ["UltiSnips"]
 # add site to runtimepath so that UltiSnips can recognize the snippets
-exec printf("set runtimepath+=%s/site", g:ivim_home)
+exec printf("set runtimepath+=%s/site", g:vc_home)
 
 g:UltiSnipsEditSplit = "horizontal"
 

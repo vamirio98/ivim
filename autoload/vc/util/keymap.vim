@@ -3,12 +3,12 @@ vim9script
 # add map through vim-which-key or which-key.nvim
 #==============================================================
 
-import autoload "../lib/ui.vim" as ui
-import autoload "./plug.vim" as plug
+import autoload "../util/notify.vim"
+import autoload "./plug.vim"
 
 # ensure which-key
 if !plug.Has('vim-which-key')
-  ui.Error('has no which-key plugin')
+  notify.Error('has no which-key plugin')
   finish
 endif
 
@@ -82,7 +82,7 @@ export def SetGroup(key_seq: string, group: string = null_string,
     mode: string = 'n', overwrite: bool = false): void
   var keys: list<string> = Split(key_seq)
   if len(keys) == 0
-    ui.Error('{keys} should not be empty')
+    notify.Error('{keys} should not be empty')
     return
   endif
 
@@ -103,7 +103,7 @@ enddef
 export def SetDesc(key_seq: string, desc_str: string, mode: string = 'n')
   var keys: list<string> = Split(key_seq)
   if len(keys) == 0
-    ui.Error('{keys} should not be empty')
+    notify.Error('{keys} should not be empty')
     return
   endif
 
@@ -124,7 +124,7 @@ def RegisterWhichKey(): void
   endfor
 enddef
 
-augroup ivim_autoload_imodule_keymap
+augroup vc_autoload_util_keymap
   au!
   au VimEnter * RegisterWhichKey()
 augroup END

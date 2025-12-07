@@ -1,7 +1,7 @@
 vim9script
 
-import autoload "../../autoload/module/plug.vim" as plug
-import autoload "../../autoload/lib/path.vim" as path
+import autoload "vc/util/plug.vim"
+import autoload "vc/util/path.vim"
 
 g:gruvbox_material_enable_italic = 1
 

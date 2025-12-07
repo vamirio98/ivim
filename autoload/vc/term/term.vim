@@ -1,7 +1,7 @@
 vim9script
 
-import autoload "../lib/platform.vim" as platform
-import autoload "../lib/popup/popup.vim" as popup
+import autoload "../util/os.vim"
+import autoload "../util/popup/popup.vim"
 
 export class Term
   var bufnr: number

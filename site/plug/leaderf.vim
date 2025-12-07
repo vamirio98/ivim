@@ -1,20 +1,20 @@
 vim9script
 
-import autoload "../../autoload/lib/path.vim" as path
-import autoload "../../autoload/lib/project.vim" as project
-import autoload "../../autoload/module/plug.vim" as plug
-import autoload "../../autoload/module/keymap.vim" as keymap
+import autoload "vc/util/path.vim"
+import autoload "vc/util/project.vim"
+import autoload "vc/util/plug.vim"
+import autoload "vc/util/keymap.vim"
 
 g:Lf_ShortcutF = ''
 g:Lf_ShortcutB = ''
 
 g:Lf_WildIgnore = {
-  'dir': g:ivim_rootmarkers,
+  'dir': g:vc_rootmarkers,
   'file': ['*.sw?', '~$*', '*.bak', '*.exe', '*.o', '*.so', '*.py[co]']
 }
 
 g:Lf_StlSeparator = { 'left': '', 'right': '', 'font': '' }
-g:Lf_RootMarkers = g:ivim_rootmarkers
+g:Lf_RootMarkers = g:vc_rootmarkers
 g:Lf_CommandMap = {}
 # g:Lf_NormalCommandMap = { '*': { '<F1>': 'g?' } }
 g:Lf_HideHelp = 1
@@ -40,7 +40,7 @@ endfor
 # vim-gutentags integration {{{
 if plug.Has('vim-gutentags')
   g:Lf_GtagsGutentags = 1
-  g:Lf_CacheDirectory = g:ivim_cache_dir
+  g:Lf_CacheDirectory = g:vc_cache_dir
   var tag_cache_dir: string = path.Join(g:Lf_CacheDirectory, "LeaderF", "gtags")
   # FIXME: cmd.exe can _NOT_ handle '\\' in file path
   tag_cache_dir = substitute(tag_cache_dir, '\\\\', '\\', 'g')
@@ -60,10 +60,10 @@ var SetDesc: func = keymap.SetDesc
 SetGroup('<leader>f', 'file')
 
 def SearchFileInVimcfg()
-  exec 'LeaderfFile' g:ivim_home
+  exec 'LeaderfFile' g:vc_home
 enddef
 def LiveSearchVimcfg(): void
-  exec 'Leaderf rg --live --no-fixed-string' g:ivim_home
+  exec 'Leaderf rg --live --no-fixed-string' g:vc_home
 enddef
 nnoremap <leader>fc <ScriptCmd>SearchFileInVimcfg()<CR>
 SetDesc('<leader>fc', 'Search Config File')

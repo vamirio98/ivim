@@ -1,22 +1,26 @@
 vim9script
 
-if get(g:, 'ivim_cmp_loaded', 0)
-  finish
+if get(g:, 'vc_plugin_cmp_loaded', 0)
+    finish
 endif
-g:ivim_cmp_loaded = 1
+g:vc_plugin_cmp_loaded = 1
 
-import autoload '../autoload/cmp/util.vim' as cutil
-import autoload '../autoload/cmp/path.vim' as cpath
-import autoload '../autoload/cmp/lsp.vim' as clsp
+import autoload 'vc/cmp/util.vim' as cutil
+import autoload 'vc/cmp/path.vim' as cpath
+import autoload 'vc/cmp/lsp.vim' as clsp
 
-cutil.InitKindHighlightGroups()
-# clsp.Setup()
+augroup VcPluginCmp
+    au!
+    au VimEnter * cutil.InitKindHighlightGroups()
+    au VimEnter * clsp.Setup()
+augroup END
 
 # insert mode
 set autocomplete
 set autocompletedelay=200
+set autocompletetimeout=1000
 # limit candidates from some sources to specific number (e.g., 5)
-set complete=.,w,b^5,u^5,t,i,Fcpath.Completor^5,Fclsp.Completor^10
+set complete=Fclsp.Completor^10,Fcpath.Completor,.,w,b^5,u^5,t,i
 set completeopt=menu,menuone,noselect,popup
 set completepopup=border:round,close:off
 

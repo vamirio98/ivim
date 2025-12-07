@@ -1,7 +1,7 @@
 vim9script
 
-import autoload "../../autoload/module/keymap.vim" as keymap
-import autoload "../../autoload/lib/project.vim" as project
+import autoload "vc/util/keymap.vim" as keymap
+import autoload "vc/util/project.vim" as project
 
 g:fzf_vim = get(g:, 'fzf_vim', {})
 
@@ -18,10 +18,10 @@ var SetDesc: func = keymap.SetDesc
 SetGroup('<leader>f', 'file')
 
 def SearchFileInVimcfg(): void
-  exec 'Files' g:ivim_home
+  exec 'Files' g:vc_home
 enddef
 def LiveSearchVimcfg(): void
-  exec 'RG .*' g:ivim_home
+  exec 'RG .*' g:vc_home
 enddef
 nnoremap <leader>fc <ScriptCmd>SearchFileInVimcfg()<CR>
 SetDesc('<leader>fc', 'Search Config File')

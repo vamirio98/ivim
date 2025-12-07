@@ -1,10 +1,10 @@
 vim9script
 
-import autoload '../autoload/lib/buffer.vim' as buffer
-import autoload '../autoload/lib/popup/popup.vim' as popup
+import autoload 'vc/util/buffer.vim'
+import autoload 'vc/util/popup/popup.vim'
 
 # {{{ Test
-def g:IvimPopupTest()
+def g:VcPopupTest()
   var b: number = buffer.Alloc()
   var p: number = popup.Create(b)
   var t: string = 'This popup will show 3 times, now is '

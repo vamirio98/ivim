@@ -1,6 +1,6 @@
 vim9script
 
-import autoload "../../autoload/module/keymap.vim" as keymap
+import autoload "vc/util/keymap.vim"
 
 var SetGroup: func = keymap.SetGroup
 var SetDesc: func = keymap.SetDesc
@@ -26,7 +26,7 @@ SetDesc('<leader>dr', 'Restart')
 nmap <silent> <leader>ds <Plug>VimspectorStop
 SetDesc('<leader>ds', 'Stop')
 
-augroup ivim_vimspector
+augroup vc_site_plug_vimspector
   au!
   au User VimSpectorUICreated CustomizeWinBar()
   au User VimSpectorJumpedToFrame OnJumpToFrame()
@@ -90,7 +90,7 @@ def OnDebugEnd(): void
   var orig_buf: number = bufnr()
   var hidden: bool = &hidden
 
-  augroup ivim_vimspector_swap_exists
+  augroup vc_site_plug_vimspector_swap_exists
     au!
     au SwapExists * v:swapchoice = 'o'
   augroup END
@@ -112,7 +112,7 @@ def OnDebugEnd(): void
     &hidden = hidden
   endtry
 
-  au! ivim_vimspector_swap_exists
+  au! vc_site_plug_vimspector_swap_exists
   s_buffers = {}
 enddef
 # }}}

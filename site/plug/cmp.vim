@@ -1,6 +1,6 @@
 vim9script
 
-import autoload "../../autoload/module/keymap.vim" as keymap
+import autoload "vc/util/keymap.vim" as keymap
 
 # for better performace
 g:lsp_use_native_client = 1
@@ -61,7 +61,7 @@ enddef
 #   \ foldtext=lsp#ui#vim#folding#foldtext()
 
 # register asyncomplete-file
-augroup ivim_lsp
+augroup vc_site_plug_lsp
   au!
   au User lsp_buffer_enabled call OnLspBufferEnabled()
   au User asyncomplete_setup asyncomplete#register_source(asyncomplete#sources#file#get_source_options({

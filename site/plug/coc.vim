@@ -1,8 +1,8 @@
 vim9script
 
-import autoload "../../autoload/module/keymap.vim" as keymap
-import autoload "../../autoload/lib/path.vim" as path
-import autoload "../../autoload/module/plug.vim" as plug
+import autoload "vc/util/keymap.vim" as keymap
+import autoload "vc/util/path.vim" as path
+import autoload "vc/util/plug.vim" as plug
 
 # some servers have issues with backup files,
 # see https://github.com/neoclide/coc.nvim/issues/649
@@ -25,10 +25,10 @@ g:coc_global_extensions = [
 ]
 
 # global coc-settings.json
-g:coc_config_home = path.Join(g:ivim_home, 'site', 'third_party', 'coc')
+g:coc_config_home = path.Join(g:vc_home, 'site', 'third_party', 'coc')
 # global settings
 g:coc_user_config = get(g:, 'coc_user_config', {})
-g:coc_user_config['workspace.rootPatterns'] = g:ivim_rootmarkers
+g:coc_user_config['workspace.rootPatterns'] = g:vc_rootmarkers
 
 # use UltiSnip
 if plug.Has('ultisnips')
@@ -241,7 +241,7 @@ SetDesc('<leader>sS', 'Symbols (Workspace)')
 
 # }}}
 
-augroup ivim_coc
+augroup vc_site_plug_coc
   au!
   # Highlight symbol and its references when holding the cursor
   au CursorHold * silent g:CocActionAsync('highlight')

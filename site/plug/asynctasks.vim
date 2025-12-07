@@ -1,20 +1,20 @@
 vim9script
 
-import autoload "../../autoload/lib/path.vim" as path
-import autoload "../../autoload/lib/platform.vim" as platform
-import autoload "../../autoload/module/plug.vim" as plug
-import autoload "../../autoload/module/keymap.vim" as keymap
+import autoload "vc/util/path.vim"
+import autoload "vc/util/os.vim"
+import autoload "vc/util/plug.vim"
+import autoload "vc/util/keymap.vim"
 
 g:asynctasks_extra_config = get(g:, 'asynctasks_extra_config', [])
 g:asynctasks_extra_config += [
-  path.Abspath(path.Join(g:ivim_home,
+  path.Abspath(path.Join(g:vc_home,
     'site/third_party/asynctasks/tasks.ini')
   )
 ]
 
 g:asyncrun_open = 6
-g:asyncrun_rootmarks = g:ivim_rootmarkers
-g:asyncrun_shell = platform.WIN ? 'bash' : 'pwsh'
+g:asyncrun_rootmarks = g:vc_rootmarkers
+g:asyncrun_shell = os.IsWin() ? 'bash' : 'pwsh'
 g:asynctasks_rtp_config = "asynctasks.ini"
 
 # python will buffer everything written to stdout when running as a backgroup
