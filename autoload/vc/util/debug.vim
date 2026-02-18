@@ -25,7 +25,7 @@ export def Equal(actual: any, expected: any, errMsg: string = null_string): bool
     if actual == expected
         return true
     endif
-    notify.Error($'error: {Stacktrace()} [{string(actual)} != {string(expected)}]{FormatErrMsg(errMsg)}')
+    notify.Error($'error: {Stacktrace()} [{actual} != {expected}]{FormatErrMsg(errMsg)}')
     return false
 enddef
 
@@ -33,6 +33,6 @@ export def NotEqual(actual: any, expected: any, errMsg: string = null_string): b
     if actual != expected
         return true
     endif
-    notify.Error($'error: {Stacktrace()} [{string(actual)} == {string(expected)}]{FormatErrMsg(errMsg)}')
+    notify.Error($'error: {Stacktrace()} [{actual} == {expected}]{FormatErrMsg(errMsg)}')
     return false
 enddef
