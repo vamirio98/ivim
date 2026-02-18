@@ -33,10 +33,11 @@ def g:VcUnletExported(): void
         notify.Warn('No export lines.')
         return
     endtry
+    # echo sExportLines
 
     var exportedVars: list<string> = []
     for line in sExportLines
-        var words: list<string> = line->split('\ \+')
+        var words: list<string> = line->substitute(':', '', 'g')->split('\ \+')
 
         if words[1] != 'abstract'
             if words[1] != 'def'
@@ -47,7 +48,7 @@ def g:VcUnletExported(): void
             exportedVars->add($'g:{filename}#{words[3]}')
         endif
     endfor
-    echo exportedVars
+    # echo exportedVars
 
     if exportedVars->empty()
         # All exports are for functions.
