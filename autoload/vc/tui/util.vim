@@ -500,7 +500,7 @@ enddef
 
 
 # Testing suit. {{{ #
-if 1
+if 0
     import autoload '../util/debug.vim'
 
     var Equal = debug.Equal

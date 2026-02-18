@@ -32,7 +32,7 @@ export def Completor(findstart: number, base: string): any
     var cItems = []
     var dirChanged: bool = false
     try
-        if options.bufRelPath && base =~ ('^\v\.\.?' .. path.sepPatern) &&
+        if options.bufRelPath && base =~ ('^\v\.\.?' .. path.sepPattern) &&
                 !bufInCwd
             # not already in buffer dir, change directory to get
             # completions for paths relative to current buffer dir

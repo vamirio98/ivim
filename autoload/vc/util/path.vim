@@ -4,7 +4,7 @@ import autoload "./os.vim"
 
 const windows: bool = os.IsWin()
 export const sep: string = (windows && !&shellslash) ? '\' : '/'
-export const sepPatern: string = (windows && !&shellslash) ? '\v(\/|\\)' : '/'
+export const sepPattern: string = (windows && !&shellslash) ? '\v(\/|\\)' : '/'
 
 
 export def IsPath(path: string): bool
@@ -102,7 +102,7 @@ def JoinTwoPath(home: string, name: string): string
         return name
     endif
     var path: string = null_string
-    if path[-1] =~ sepPatern
+    if path[-1] =~ sepPattern
         path = path .. name
     else
         path = home .. sep .. name
@@ -323,3 +323,32 @@ export def Shorten(path: string, limit: number = 40): string
     endif
     return newPath
 enddef
+
+
+# Testing suit. {{{ #
+if 0
+    import autoload './debug.vim'
+
+    var Assert = debug.Assert
+
+    def TestIsPath(): bool
+        return Assert(IsPath('.')) && Assert(IsPath('..')) &&
+            Assert(IsPath('./')) && Assert(IsPath('../')) &&
+            Assert(IsPath('./a')) && Assert(IsPath('../a')) &&
+            Assert(IsPath('./a/..')) && Assert(IsPath('../a/..')) &&
+            Assert(!IsPath('...')) &&
+            Assert(IsPath('C:/')) && Assert(IsPath('C:\\')) &&
+            Assert(IsPath('C:/a')) && Assert(IsPath('C:\\a')) &&
+            Assert(IsPath('C:/a\\..')) && Assert(IsPath('C:\\a/..')) &&
+            Assert(IsPath('/tmp')) && Assert(IsPath('/tmp/')) &&
+            Assert(IsPath('/tmp/..')) && Assert(IsPath('/tmp\\..')) &&
+            Assert(!IsPath('https://')) && Assert(!IsPath(''))
+    enddef
+
+    def Test(): void
+        TestIsPath()
+    enddef
+
+    Test()
+endif
+# }}} Testing suit. #
