@@ -5,20 +5,83 @@ import autoload '../util/string.vim' as str
 
 # Parse item. {{{ #
 export class Item
-    var _text: any
-    var shortcut: string
+    public var text: string = null_string
+    public var textWidth: number = 0
+    var _textTokens: list<any> = null_list  # Record all part of text (string or func)
+    var key: string = null_string
+    var _keyPosDesc: list<number> = null_list  # [whichPart, posInPart]
+    public var keyPos: number = -1
 
-    def new(what: any)
-        [this._text, this.shortcut] = this._Parse(what)
+    var help: string = null_string
+    var _hook: any = null  # Hook triggered when click
+
+    var isSep: bool = false
+
+    public var index: number = -1  # Used for index item
+
+    #---------------------------------------------------------------
+    # new({desc})
+    #
+    # {desc} can be a string, dict or list
+    # string: '&x' means 'x' is the shortcut key, '[x]' means 'x' is a expr
+    #         '&&' to escape '&', '[[' to escape '[' and ']]' to escape ']'
+    # dict:
+    #     what: string, used as above
+    #     hook: [optional] any, hook to execute when click item
+    #         - string: like :{hook} in command line
+    #         - function: execute the function
+    #     help: [optional] string, help text
+    # list:
+    #     [what, hook, help]
+    #---------------------------------------------------------------
+    def new(desc: any)
+        var dt = type(desc)
+        if dt == v:t_string
+            [this._textTokens, this.key, this._keyPosDesc] = this._Parse(desc)
+        elseif dt == v:t_dict
+            [this._textTokens, this.key, this._keyPosDesc] = this._Parse(desc.what)
+            if desc->has_key('hook')
+                var th = type(desc.hook)
+                if th == v:t_string
+                    this._hook = this._GenFunc(desc.hook)
+                elseif th == v:t_func
+                    this._hook = desc.hook
+                else
+                    throw $'desc.hook should be either string or func'
+                endif
+            endif
+            this.help = desc->get('help', null_string)
+        elseif dt == v:t_list
+            [this._textTokens, this.key, this._keyPosDesc] = this._Parse(desc[0])
+            this._hook = desc->get(1, null)
+            this.help = desc->get(2, null_string)
+        else
+            throw $'unsupported type'
+        endif
+        this.Update()
     enddef
 
-    def Text(): string
-        if type(this._text) == v:t_string
-            return this._text
-        else
-            var F: func = this._text
-            return F()
-        endif
+    def Exec(): void
+        var F: func = this._hook
+        F()
+    enddef
+
+
+    # Update `text` and `keyPos`
+    def Update(): void
+        this.text = ''
+        this.textWidth = 0
+        this.keyPos = -1
+
+        var i: number = 0
+        for Entry in this._textTokens
+            if this._keyPosDesc != null && i == this._keyPosDesc[0]
+                this.keyPos = this.text->len() + this._keyPosDesc[1]
+            endif
+            this.text ..= type(Entry) == v:t_string ? Entry : Entry()
+            i += 1
+        endfor
+        this.textWidth = strwidth(this.text)
     enddef
 
 
@@ -31,74 +94,43 @@ export class Item
         return () => e->eval()->string()
     enddef
 
-    # Return: [_text, shortcut]
-    def _ParseString(what: string): list<any>
-        var tokens: list<any> = []
+
+    # Return list<[0]: isExpr, [1]: text>
+    def _ParseBrackets(text: string): list<list<any>>
+        var res: list<any> = []
         var plain: string = ''
         var expr: string = ''
         var inExpr: bool = false
-        var Text: any
-        var shortcut: string = null_string
 
-        var whatLen = what->len()
-        var i = 0
-        while i < whatLen
-            var c: string = what[i]
-
-            if c == '&'
-                # Out of bounds
-                if i + 1 >= whatLen
-                    throw $'unexpected & found in ''{what}'''
-                endif
-                var nc: string = what[i + 1]
-                if nc == '&'  # Escape '&'
-                    if inExpr
-                        expr ..= '&'
-                    else
-                        plain ..= '&'
-                    endif
-                    i += 2  # Skip the next '&'
-                    continue
-                endif
-                # Shortcut always in plain part
-                if inExpr
-                    expr ..= '&'
-                    i += 1
-                    continue
-                else
-                    if shortcut != null
-                        throw $'only one shortcut shound be found in ''{what}'''
-                    endif
-                    shortcut = nc
-                    i += 1  # Hide the '&'
-                    continue
-                endif
-            endif
+        const textLen: number = text->len()
+        var i: number = 0
+        while i < textLen
+            var c: string = text[i]
 
             if c == '['
                 # Out of bounds
-                if i + 1 >= whatLen
-                    throw $'unexpected [ found in ''{what}'''
+                if i + 1 >= textLen
+                    throw $'unexpected [ found in ''{text}'''
                 endif
 
-                var nc: string = what[i + 1]
+                var nc: string = text[i + 1]
                 if inExpr
                     if nc != '['  # Nesting '['
-                        throw $'unexpected [ found in ''{what}'''
+                        throw $'unexpected [ found in ''{text}'''
                     endif
                     expr ..= '['
                     i += 2  # Skip the next '['
                     continue
                 elseif nc == '['  # Escape '['
                     plain ..= '['
-                    i += 2  # Skip the next '['
+                    i += 2
                     continue
                 elseif nc == ']'  # Empty expr
-                    throw $'empty expr found in ''{what}'''
+                    throw $'empty expr found in ''{text}'''
                 else
                     inExpr = true
                     if !plain->empty()
-                        tokens->add(plain)
+                        res->add([false, plain])
                     endif
                     plain = ''
                     i += 1
@@ -107,19 +139,16 @@ export class Item
             elseif c == ']'
                 # Check for out of bounds
                 var nc: string = null_string
-                if i + 1 < whatLen
-                    nc = what[i + 1]
+                if i + 1 < textLen
+                    nc = text[i + 1]
                 endif
 
                 if nc == null
                     if !inExpr
-                        throw $'unexpected ] found in ''{what}'''
+                        throw $'unexpected ] found in ''{text}'''
                     endif
                     # Leave expr
-                    # NOTE: use function to generate lambda to avoid the
-                    # variable captrued (in here it's `expr`) changed in
-                    # the next loop
-                    tokens->add(this._GenFunc(expr))
+                    res->add([true, expr])
                     expr = ''
                     inExpr = false
                     i += 1
@@ -137,14 +166,11 @@ export class Item
                 endif
 
                 if !inExpr
-                    throw $'unexpected ] found in ''{what}'''
+                    throw $'unexpected ] found in ''{text}'''
                 endif
 
                 # Leave expr
-                # NOTE: use function to generate lambda to avoid the
-                # variable captrued (in here it's `expr`) changed in
-                # the next loop
-                tokens->add(this._GenFunc(expr))
+                res->add([true, expr])
                 expr = ''
                 inExpr = false
                 i += 1
@@ -160,33 +186,82 @@ export class Item
         endwhile
 
         if inExpr
-            throw $'expected ] in end of ''{what}'''
+            throw $'unexpected [ found in ''{text}'''
         elseif !plain->empty()
-            tokens->add(plain)
+            res->add([false, plain])
         endif
 
-        if tokens->len() == 1 && tokens[0]->type() == v:t_string
-            Text = tokens[0]
-        else
-            # Combine all tokens into a function which return a string
-            Text = (): string => {
-                var res: string = ''
-                for Token in tokens
-                    var t = Token->type()
-                    if t == v:t_string
-                        res ..= Token
-                    elseif t == v:t_func
-                        res ..= Token()
-                    else
-                        res ..= string(Token)
-                    endif
-                endfor
-                return res
-            }
-        endif
-
-        return [Text, shortcut]
+        return res
     enddef
+
+
+    # Return: [text,
+    #          key(null_string if not found),
+    #          keyPos(-1 for not found)]
+    def _ParseAnd(isExpr: bool, text: string): list<any>
+        var key: string = null_string
+        var keyPos: number = -1
+        var pos: number = 0
+
+        if isExpr  # No need to conside shortcut key in expr
+            return [text->substitute('&&', '&', 'g'), key, keyPos]
+        endif
+
+        var tokens = text->split('&&', 1)
+        var res: list<string> = []
+        for entry in tokens
+            var parts: list<string> = entry->split('&', 1)
+            if parts->len() == 1
+                res->add(parts[0])
+                continue
+            endif
+
+            if key != null || parts->len() > 2
+                throw $'more than one shortcut key found in {text}'
+            endif
+            if parts[1]->empty()
+                throw $'expect key following &'
+            endif
+            key = parts[1][0]
+            keyPos = res->len() + parts[0]->len()
+            res->add(parts->join(''))
+        endfor
+
+        return [res->join('&'), key, keyPos]
+    enddef
+
+
+    # Return: [tokens, key, keyPosDesc]
+    def _ParseText(text: string): list<any>
+        var tokens: list<any> = []
+        var parts: list<list<any>> = this._ParseBrackets(text)
+        var key: string = null_string
+        var keyPosDesc: list<number> = null_list
+
+        var i = -1
+        for part in parts
+            i += 1
+            if part[0]  # Expr
+                tokens->add(this._GenFunc(part[1]))
+                continue
+            endif
+
+            var [t: string, k: string, kp: number] =
+                this._ParseAnd(part[0], part[1])
+            tokens->add(t)
+            if k == null
+                continue
+            endif
+            if key != null
+                throw $'more than on shortcut key found in {text}'
+            endif
+            key = k
+            keyPosDesc = [i, kp]
+        endfor
+
+        return [tokens, key, keyPosDesc]
+    enddef
+
 
     #---------------------------------------------------------------
     # Parse({what})
@@ -194,50 +269,54 @@ export class Item
     # Parse string and generate Item.
     # The `[expr]` will be treat as expression, use '[[' to escape '['
     # and ']]' to escape ']'.
-    # The `&x` will be treat as shortcut `x`, use '&&' to escape '&'.
+    # The `&x` will be treat as shortcut key `x`, use '&&' to escape '&'.
     #
     # {what}: string or list<any>
     #   If is a string, support contains expression surround by %
     #   e.g.:
     #     {what} is plain text:
     #         [I]: 'hello'
-    #         [O]: [0]Text() => 'hello'
-    #              [1]shortcut = null_string
+    #         [O]: [0]tokens = ['hello']
+    #              [1]key = null_string
+    #              [2]keyPosDesc = null_list
     #     {what} contains expression (like vim expr-$', but
     #     no need the leading '$' and replace `{` and `}` with `[` and `]`,
     #     see :h expr-$'):
     #         [I]: '&set lines to [&lines]'
-    #         [O]: [0]Text() => will be called each time
-    #              UI render, show the lines of current window.
-    #              [1]shortcut = 's'
+    #         [O]: [0]tokens = ['set lines to ', `&lines`]
+    #              [1]key = 's'
+    #              [2]keyPosDesc = [0, 0]
     #   If is a list, all item in it will be contact each time UI
     #   render, all functions will be evaled before contact
-    #   e.g.(`&lines` = 60):
-    #       [I]: [ '&hello', '[&lines]', {funcref} ]
-    #       [O]: [0]Text() => 'hello60{result of funcref()}'
-    #            [1]shortcut = 'h'
+    #   e.g.
+    #       [I]: [ 'hel&lo', '[&lines]', {funcref} ]
+    #       [O]: [0]tokens = ['hello', `&lines`, {funcref}]
+    #            [1]key = 'l'
+    #            [2]keyPosDesc = [0, 3]
     #---------------------------------------------------------------
     def _Parse(what: any): list<any>
         if what->type() == v:t_string
-            return this._ParseString(what)
+            return this._ParseText(what)
         elseif what->type() == v:t_list
             var tokens: list<any> = []
-            var Text: any
-            var shortcut: string = null_string
-            var hasShortcut: bool = false
+            var key: string = null_string
+            var keyPosDesc: list<number> = null_list
 
+            var i = 0
             for entry in what
                 var t = entry->type()
                 if t == v:t_string
-                    var [tt: any, ss: string] = this._ParseString(entry)
-                    if ss != null
-                        if hasShortcut
-                            throw $'more than one shortcut found in ''{what}'''
+                    var [tt: any, kk: string, kp: list<number>] =
+                        this._ParseText(entry)
+                    if kk != null
+                        if key != null
+                            throw $'more than one shortcut key found in ''{what}'''
                         endif
-                        hasShortcut = true
-                        shortcut = ss
+                        key = kk
+                        keyPosDesc = [i + kp[0], kp[1]]
                     endif
-                    tokens->add(tt)
+                    tokens->extend(tt)
+                    i += tt->len()
                 elseif t == v:t_func
                     tokens->add(entry)
                 else
@@ -245,15 +324,7 @@ export class Item
                 endif
             endfor
 
-            Text = () => {
-                    var res: string = ''
-                    for Token in tokens
-                        res ..= Token->type() == v:t_string ? Token : Token()
-                    endfor
-                    return res
-                }
-
-            return [Text, shortcut]
+            return [tokens, key, keyPosDesc]
         else
             throw $'{what} should be a string or list'
         endif
@@ -337,10 +408,12 @@ if 0
         enddef
 
         def CheckEqual(
-                what: any, text: string, shortcut: string = null_string
+                what: any, text: string,
+                key: string = null_string, keyPos: number = -1
         ): bool
             var item: Item = Item.new(what)
-            return Equal(item.Text(), text) && Equal(item.shortcut, shortcut)
+            return Equal(item.text, text) && Equal(item.key, key) &&
+                Equal(item.keyPos, keyPos)
         enddef
 
         return CheckEqual('hello', 'hello') &&
@@ -350,10 +423,13 @@ if 0
             CheckEqual('[[a]]', '[a]') &&
                         \
             CheckEqual('&&hello', '&hello') &&
-            CheckEqual('&hello', 'hello', 'h') &&
-            CheckEqual('&&&hello', '&hello', 'h') &&
+            CheckEqual('&hello', 'hello', 'h', 0) &&
+            CheckEqual('&&&hello', '&hello', 'h', 1) &&
                         \
-            CheckEqual(['he', 'l&l', 'o', '[&lines]'], $'hello{&lines}', 'l') &&
+            CheckEqual({what: ['he', 'l&l', 'o', '[&lines]']},
+                $'hello{&lines}', 'l', 3) &&
+                CheckEqual({what: ['he', 'l&lo[&lines]']},
+                $'hello{&lines}', 'l', 3) &&
                         \
             CheckExcept('[]') && CheckExcept('[  ]') &&
             CheckExcept('[') && CheckExcept(']') &&
