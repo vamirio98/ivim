@@ -1,29 +1,6 @@
 vim9script
 
 import autoload '../util/string.vim' as str
-import autoload '../util/notify.vim'
-import autoload '../util/interact.vim'
-
-
-export def ExtactBorderchars(border: string): list<string>
-    if border->len() != 8
-        throw $'{border} should include 8 characters'
-    endif
-    return border->split('\zs')
-enddef
-
-
-export def WinExec(winid: number, command: any, silent: string = null_string): void
-    var cmd: string = null_string
-    if type(command) == v:t_string
-        cmd = command
-    elseif type(command) == v:t_list
-        cmd = command->join("\n")
-    endif
-    if command->type() == v:t_string
-        keepalt win_execute(winid, cmd, silent)
-    endif
-enddef
 
 
 # Parse item. {{{ #
@@ -318,143 +295,6 @@ enddef
 # }}} Object. #
 
 
-# Keymap. {{{ #
-const kKeymap: dict<string> = {
-    "\<esc>": 'ESC',
-    "\<cr>": 'ENTER',
-    "\<space>": 'ENTER',
-    "\<up>": 'UP',
-    "\<down>": 'DOWN',
-    "\<left>": 'LEFT',
-    "\<right>": 'RIGHT',
-    "\<home>": 'HOME',
-    "\<end>": 'END',
-    "\<C-j>": 'DOWN',
-    "\<C-h>": 'LEFT',
-    "\<C-k>": 'UP',
-    "\<C-l>": 'RIGHT',
-    "\<C-n>": 'NEXT',
-    "\<C-p>": 'PREV',
-    "\<C-b>": 'PAGEUP',
-    "\<C-f>": 'PAGEDOWN',
-    "\<C-u>": 'HALFUP',
-    "\<C-d>": 'HALFDOWN',
-    "\<PageUp>": 'PAGEUP',
-    "\<PageDown>": 'PAGEDOWN',
-    #"\<C-g>": 'NOHL',
-    'j': 'DOWN',
-    'k': 'UP',
-    'h': 'LEFT',
-    'l': 'RIGHT',
-    'g': 'TOP',
-    'G': 'BOTTOM',
-    'q': 'ESC',
-    'n': 'NEXT',
-    'N': 'PREV',
-}
-
-export def Keymap(modifiable: bool = false): dict<string>
-    return modifiable ? deepcopy(kKeymap) : kKeymap
-enddef
-# }}} Keymap. #
-
-
-# Move and search. {{{ #
-export def UpdateCursor(winid: number): void
-    const margin: number = &scrolloff
-    var winHeight: number = winheight(winid)
-    var line: number = line('.', winid)
-    var winLine: number = WinScreenLine(winid)
-    if winHeight - winLine < margin
-        WinExec(winid, $"noautocmd normal {margin - (winHeight - winLine)}\<C-e>")
-    elseif winLine - 1 < margin
-        WinExec(winid, $"noautocmd normal {margin - (winLine - 1)}\<C-y>")
-    endif
-enddef
-
-export def MoveCursor(winid: number, offset: string): void
-    var winHeight: number = winheight(0)
-    var off: number = 0
-    if offset == 'PAGEUP'
-        off = -winHeight
-    elseif offset == 'PAGEDOWN'
-        off = winHeight
-    elseif offset == 'HALFUP'
-        off = -(winHeight / 2)
-    elseif offset == 'HALFDOWN'
-        off = winHeight / 2
-    elseif offset == 'UP'
-        off = -1
-    elseif offset == 'DOWN'
-        off = 1
-    elseif offset == 'TOP'
-        WinExec(winid, 'noautocmd normal gg')
-        return
-    elseif offset == 'BOTTOM'
-        WinExec(winid, 'noautocmd normal G')
-        return
-    endif
-
-    if off > 0
-        # WinExec(winid, $"noautocmd normal {off}\<C-e>")
-        WinExec(winid, $"noautocmd normal {off}j")
-    else
-        # WinExec(winid, $"noautocmd normal {-off}\<C-y>")
-        WinExec(winid, $"noautocmd normal {-off}k")
-    endif
-enddef
-
-
-export def SearchOrJump(winid: number, cmd: string): void
-    if cmd == '/' || cmd == '?'
-        var text: string = interact.Input(cmd)
-        # WinExec(winid, 'set hlsearch')
-        if text != null_string
-            try
-                # FIXME: ':' is required or E1050 will occur,
-                # vim9script can not distinguish whether '/'
-                # is search command or division sign
-                WinExec(winid, $':{cmd}{text}')
-            catch /^Vim\%((\a\+)\)\=:E486:/
-                notify.Error('E486: Pattern not found: ' .. text)
-            endtry
-            setwinvar(winid, '_vcTuiSearchCmd', cmd)
-            setwinvar(winid, '_vcTuiSearchPattern', text)
-        endif
-    elseif cmd == ':'
-        var text: string = interact.Input(cmd)
-        if text != null_string
-            WinExec(winid, cmd .. text)
-        endif
-    endif
-enddef
-
-
-export def SearchNext(winid: number, forward: bool): void
-    var prevCmd: string = getwinvar(winid, '_vcTuiSearchCmd')
-    var prevPat: string = getwinvar(winid, '_vcTuiSearchPattern')
-    if prevCmd == null_string || prevPat == null_string
-        return
-    endif
-
-    var cmd: string = null_string
-    if forward
-        cmd = prevCmd
-    else
-        cmd = prevCmd == '/' ? '?' : '/'
-    endif
-    try
-        # FIXME: ':' is required or E1050 will occur,
-        # vim9script can not distinguish whether '/'
-        # is search command or division sign
-        WinExec(winid, $':{cmd}{prevPat}')
-    catch /^Vim\%((\a\+)\)\=:E486:/
-        notify.Error($'E486: Pattern not found: {prevPat}')
-    endtry
-enddef
-# }}} Move and search. #
-
-
 # String. {{{ #
 # Remove all tailing '\t\r\n ' in string list.
 export def StrListNormalize(textlist: any): list<string>
@@ -476,29 +316,6 @@ enddef
 # }}} String. #
 
 
-# Misc. {{{ #
-# Get the cursor position relative to the top row of the screen, one-based.
-export def WinScreenLine(winid: number): number
-    # Also see :h getwininfo() for more infomation.
-    var top: number = line('w0', winid)
-    var cur: number = line('.', winid)
-    return cur - top + 1
-enddef
-
-
-export def GetWinBufLine(winid: number, lnum: any, end: any = '$'): list<string>
-    var bnr: number = winbufnr(winid)
-    return getbufline(bnr, lnum, end)
-enddef
-
-
-export def GetWinBufOneLine(winid: number, lnum: any): string
-    var bnr: number = winbufnr(winid)
-    return getbufoneline(bnr, lnum)
-enddef
-# }}} Misc. #
-
-
 # Testing suit. {{{ #
 if 0
     import autoload '../util/debug.vim'
@@ -506,7 +323,7 @@ if 0
     var Equal = debug.Equal
     var Assert = debug.Assert
 
-    def TestParse(): bool
+    def TestItem(): bool
         def CheckExcept(what: string): bool
             var hasExcept: bool = false
             try
@@ -548,7 +365,7 @@ if 0
 
 
     def Test(): bool
-        return TestParse()
+        return TestItem()
     enddef
 
     Test()
