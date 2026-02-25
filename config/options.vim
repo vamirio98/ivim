@@ -49,7 +49,9 @@ set autowrite
 
 set viewoptions=cursor,curdir,folds,slash,unix
 
-set clipboard^=unnamed,unnamedplus
+if has('clipboard')
+    set clipboard^=unnamed,unnamedplus
+endif
 if (!empty($SSH_TTY) || os.IsWsl())
     # let vim clipboard sync with system
     # from https://www.zhihu.com/tardis/zm/ans/2156080913?source_id=1003
