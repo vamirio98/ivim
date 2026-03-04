@@ -25,9 +25,10 @@ enddef
 
 # Options. {{{ #
 #---------------------------------------------------------------
+# Calculate window size according to {what} and {opts}
 # Return { 'minwidth', 'maxwidth', 'minheight', 'maxheight' }
 #---------------------------------------------------------------
-export def CalSize(what: any = null, opts: dict<any> = null_dict): dict<number>
+export def CalSize(what: any = null, opts: dict<any> = null_dict): dict<any>
     var minWidth: number = opts->get('minwidth', 20)
     var minHeight: number = opts->get('minheight', 1)
     minWidth = max([minWidth, 20])
@@ -63,7 +64,8 @@ export def CalSize(what: any = null, opts: dict<any> = null_dict): dict<number>
 
     w = max([min([w, maxWidth]), minWidth])
     h = max([min([h, maxHeight]), minHeight])
-    var res: dict<number> = {
+    # Use dict<any> because other popup arguments may be any type
+    var res: dict<any> = {
         'minwidth': w,
         'maxwidth': w,
         'minheight': h,
@@ -75,6 +77,7 @@ enddef
 
 
 # Keymap. {{{ #
+# Default keymap
 const kKeymap: dict<string> = {
     "\<esc>": 'ESC',
     "\<cr>": 'ENTER',
@@ -116,6 +119,9 @@ enddef
 
 
 # Move and search. {{{ #
+# NOTE: call `redraw` before call this function,
+# otherwise the cursor may go to wrong position
+# because Vim may get the old view info
 export def UpdateCursor(winid: number): void
     const margin: number = &scrolloff
     var winHeight: number = winheight(winid)
@@ -157,7 +163,6 @@ export def MoveCursor(winid: number, offset: string): void
     else
         Exec(winid, $"noautocmd normal {-off}k")
     endif
-    echo $'h: {winHeight}, hh: {winHeight / 2}'
 enddef
 
 

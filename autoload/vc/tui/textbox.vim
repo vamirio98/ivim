@@ -9,7 +9,7 @@ def TrOpts(what: any, options: dict<any>): dict<any>
     var opts: dict<any> = options->deepcopy()
 
     opts->extend({
-        'warp': 1,
+        'wrap': 1,
         'cursorline': 1,
         'drag': 1,
         'close': 'button',
@@ -43,7 +43,6 @@ def Filter(winid: number, key: string): bool
         window.SearchOrJump(winid, key)
         redraw
         window.UpdateCursor(winid)
-        redraw
         return true
     elseif keymap->has_key(key)
         const k = keymap[key]
