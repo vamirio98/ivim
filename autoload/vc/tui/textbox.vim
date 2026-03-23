@@ -8,7 +8,7 @@ import autoload './window.vim'
 def Filter(winid: number, key: string): bool
     var obj = core.ObjAcquire(winid)
     if !obj->has_key('keymap')
-        obj.keymap = window.Keymap(true)
+        obj.keymap = core.Keymap(true)
     endif
 
     const keymap = obj.keymap
@@ -59,7 +59,7 @@ def InitPopupOpts(what: any, options: dict<any>): dict<any>
         border: [ 1, 1, 1, 1 ],
         borderchars: g:vcTuiBorderChars,
         padding: [ 0, 1, 0, 1 ],
-        wrap: 1,
+        wrap: 0,
         cursorline: 1,
         drag: 1,
         close: 'button',

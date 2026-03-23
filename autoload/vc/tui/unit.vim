@@ -2,23 +2,42 @@ vim9script
 
 import autoload '../util/string.vim' as str
 
-# Parse unit. {{{ #
+class KeyPosDesc
+    public var seq: number = -1  # in which part
+    public var pos: number = -1  # position in the part
+endclass
+
+
+export class Pos
+    public var row: number = -1
+    public var col: number = -1
+endclass
+
+
+export class Key
+    public var char: string = null_string
+    public var row: number = -1
+    public var col: number = -1
+
+    def new(this.char, this.row = v:none, this.col = v:none)
+    enddef
+endclass
+
+
 export class Unit
     public var text: string = null_string
+    public var key: Key = null_object
+    public var pos: Pos = Pos.new()  # left top
     public var width: number = 0
-    var _tokens: list<any> = null_list  # Record all part of text (string or func)
-    var key: string = null_string
-    var _keyPosDesc: list<number> = null_list  # [whichPart, posInPart]
-    public var keyPos: number = -1
-    public var hlStart: number = -1
-    public var hlEndup: number = -1
-
+    public var height: number = 0
+    public var index: number = -1  # which unit
     var help: string = null_string
-    var _hook: any = null  # Hook triggered when click
-
     var isSep: bool = false
 
-    public var index: number = -1  # Used for index unit
+    var _parts: list<any> = null_list  # all parts of text (string or func)
+    var _keyPosDesc: KeyPosDesc = null_object
+    var _Hook: func = null_function  # toggle when click
+
 
     #---------------------------------------------------------------
     # new({desc})
@@ -26,6 +45,7 @@ export class Unit
     # {desc} can be a string, dict or list
     # string: '&x' means 'x' is the shortcut key, '[x]' means 'x' is a expr
     #         '&&' to escape '&', '[[' to escape '[' and ']]' to escape ']'
+    #         Note: as no hook specified, trigger shortcut will do nothing
     # dict:
     #     what: string, used as above
     #     hook: [optional] any, hook to execute when click unit
@@ -34,78 +54,149 @@ export class Unit
     #     help: [optional] string, help text
     # list:
     #     [what, hook, help]
+    #     if no need hook, pass it as null
     #---------------------------------------------------------------
-    def new(desc: any)
-        def ParseHook(hook: any): func
-            var ht = type(hook)
-            if ht == v:t_string
-                return this._GenFunc(hook)
-            elseif ht == v:t_func
-                return hook
-            else
-                throw $'desc.hook should be either string or func'
-            endif
+    def new(a_desc: any)
+        def GenHook(a_hook: any): func
+            return a_hook->type() == v:t_string ? this._GenFunc(a_hook) : a_hook
         enddef
 
-        var dt = type(desc)
-        if dt == v:t_string
-            [this._tokens, this.key, this._keyPosDesc] = this._Parse(desc)
-        elseif dt == v:t_dict
-            [this._tokens, this.key, this._keyPosDesc] = this._Parse(desc.what)
-            if desc->has_key('hook')
-                this._hook = ParseHook(desc.hook)
+        var desc: dict<any> = {}
+
+        var t = type(a_desc)
+        if t == v:t_string
+            desc.what = a_desc
+        elseif t == v:t_dict
+            desc = a_desc
+        elseif t == v:t_list
+            desc.what = a_desc[0]
+            if get(a_desc, 1, null) != null
+                desc.hook = a_desc[1]
             endif
-            this.help = desc->get('help', null_string)
-        elseif dt == v:t_list
-            [this._tokens, this.key, this._keyPosDesc] = this._Parse(desc[0])
-            if desc->len() > 1
-                this._hook = ParseHook(desc[1])
-            endif
-            this.help = desc->get(2, null_string)
-        else
-            throw $'unsupported type'
+            desc.help = get(a_desc, 2, null_string)
         endif
+
+        var key = null_string
+        [this._parts, key, this._keyPosDesc] = this._Parse(desc.what)
+        if key != null
+            this.key = Key.new(key)
+        endif
+        if desc->has_key('hook')
+            this._Hook = GenHook(a_desc.hook)
+        endif
+        this.help = desc->get('help', null_string)
         this.Update()
     enddef
 
+
     def Exec(): void
-        if this._hook != null
-            var F: func = this._hook
-            F()
+        if this._Hook != null_function
+            this._Hook()
         endif
     enddef
 
 
-    # Update `text` and `keyPos`
+    # Update this.text and this.key
     def Update(): void
-        this.text = ''
-        this.width = 0
-        this.keyPos = -1
-
-        var i: number = 0
-        for Entry in this._tokens
-            if this._keyPosDesc != null && i == this._keyPosDesc[0]
-                this.keyPos = this.text->len() + this._keyPosDesc[1]
+        var text = ''
+        var i = 0
+        for Entry in this._parts
+            if this.key != null && i == this._keyPosDesc.seq
+                this.key.col = text->len() + this._keyPosDesc.pos
             endif
-            this.text ..= type(Entry) == v:t_string ? Entry : Entry()
+            text ..= type(Entry) == v:t_string ? Entry : Entry()
             i += 1
         endfor
-        this.width = strwidth(this.text)
+        this.text = text
+        this.width = this.text->strwidth()
+        this.height = this.text->split("\n")->len()
     enddef
 
 
-    def _GenFunc(expr: string): func: string
-        # Make `expr` a local varialbe to avoid it be changed.
-        const e: string = expr->str.Strip()
-        if e->empty()
-            throw $'expr should not be empty'
+    def _GenFunc(a_expr: string): func: string
+        # make `expr` a local variable to avoid it be change in closure
+        const expr = a_expr->str.Strip()
+        if expr->empty()
+            throw 'expr can not be empty'
         endif
-        return () => e->eval()->string()
+        return () => expr->eval()->string()
     enddef
 
 
-    # Return list<[0]: isExpr, [1]: text>
-    def _ParseBrackets(text: string): list<list<any>>
+    # Parse item {{{ #
+
+    #---------------------------------------------------------------
+    # _Parse({what})
+    #
+    # Parse string and generate Unit.
+    # The `[expr]` will be treat as expression, use '[[' to escape '['
+    # and ']]' to escape ']'.
+    # The `&x` will be treat as shortcut key `x`, use '&&' to escape '&'.
+    #
+    # {what}: string or list<any>
+    #   If is a string, support contains expression surround by `[]`
+    #   e.g.:
+    #     {what} is plain text:
+    #         [I]: 'hello'
+    #         [O]: [0]parts = ['hello']
+    #              [1]key = null_string
+    #              [2]keyPosDesc = null_object
+    #     {what} contains expression (like vim expr-$', but
+    #     no need the leading '$' and replace `{` and `}` with `[` and `]`,
+    #     see :h expr-$'):
+    #         [I]: '&set lines to [&lines]'
+    #         [O]: [0]parts = ['set lines to ', `&lines`]
+    #              [1]key = 's'
+    #              [2]keyPosDesc = { .seq = 0, .pos = 0 }
+    #   If is a list, all item in it will be contact each time UI
+    #   render, all functions will be evaled before contact
+    #   e.g.
+    #       [I]: [ 'hel&lo', '[&lines]', {funcref} ]
+    #       [O]: [0]parts = ['hello', `&lines`, {funcref}]
+    #            [1]key = 'l'
+    #            [2]keyPos = { .seq = 0, .pos = 3 }
+    #
+    # Return: [parts, key, keyPosDesc]
+    #---------------------------------------------------------------
+    def _Parse(what: any): list<any>
+        var t = type(what)
+        if t == v:t_string
+            return this._DoParse(what)
+        elseif t == v:t_list
+            var parts: list<any> = []
+            var key = null_string
+            var keyPosDesc = null_object
+
+            var i = 0
+            for entry in what
+                var et = type(entry)
+                if et == v:t_string
+                    var [tmp: any, k: string, kp: list<number>] =
+                        this._DoParse(entry)
+                    if k != null
+                        if key != null
+                            throw $"more than one shortcut key found in '{what}'"
+                        endif
+                        key = k
+                        keyPosDesc = KeyPosDesc.new(i + kp[0], kp[1])
+                    endif
+                    parts->extend(tmp)
+                    i += len(tmp)
+                elseif et == v:t_func
+                    parts->add(entry)
+                else
+                    parts->add(string(entry))
+                endif
+            endfor
+
+            return [parts, key, keyPosDesc]
+        else
+            throw $"'{what}' should be a string or list"
+        endif
+    enddef
+
+    # Return list<[0]: isExpr: bool, [1]: content: string|func>
+    def _EscapeBrackets(text: string): list<list<any>>
         var res: list<any> = []
         var plain: string = ''
         var expr: string = ''
@@ -207,14 +298,9 @@ export class Unit
     # Return: [text,
     #          key(null_string if not found),
     #          keyPos(-1 for not found)]
-    def _ParseAnd(isExpr: bool, text: string): list<any>
+    def _ParseAnd(text: string): list<any>
         var key: string = null_string
         var keyPos: number = -1
-        var pos: number = 0
-
-        if isExpr  # No need to conside shortcut key in expr
-            return [text->substitute('&&', '&', 'g'), key, keyPos]
-        endif
 
         var tokens = text->split('&&', 1)
         var res: list<string> = []
@@ -240,24 +326,24 @@ export class Unit
     enddef
 
 
-    # Return: [tokens, key, keyPosDesc]
-    def _ParseText(text: string): list<any>
-        var tokens: list<any> = []
-        var parts: list<list<any>> = this._ParseBrackets(text)
+    # Return: [parts, key, keyPosDesc]
+    def _DoParse(text: string): list<any>
+        var parts: list<any> = []
+        var tokens: list<list<any>> = this._EscapeBrackets(text)
         var key: string = null_string
-        var keyPosDesc: list<number> = null_list
+        var keyPosDesc: KeyPosDesc = null_object
 
         var i = -1
-        for part in parts
+        for token in tokens
             i += 1
-            if part[0]  # Expr
-                tokens->add(this._GenFunc(part[1]))
+            if token[0]  # Expr
+                parts->add(this._GenFunc(token[1]))
                 continue
             endif
 
             var [t: string, k: string, kp: number] =
-                this._ParseAnd(part[0], part[1])
-            tokens->add(t)
+                this._ParseAnd(token[1])
+            parts->add(t)
             if k == null
                 continue
             endif
@@ -265,81 +351,13 @@ export class Unit
                 throw $'more than on shortcut key found in {text}'
             endif
             key = k
-            keyPosDesc = [i, kp]
+            keyPosDesc = KeyPosDesc.new(i, kp)
         endfor
 
-        return [tokens, key, keyPosDesc]
+        return [parts, key, keyPosDesc]
     enddef
-
-
-    #---------------------------------------------------------------
-    # Parse({what})
-    #
-    # Parse string and generate Unit.
-    # The `[expr]` will be treat as expression, use '[[' to escape '['
-    # and ']]' to escape ']'.
-    # The `&x` will be treat as shortcut key `x`, use '&&' to escape '&'.
-    #
-    # {what}: string or list<any>
-    #   If is a string, support contains expression surround by %
-    #   e.g.:
-    #     {what} is plain text:
-    #         [I]: 'hello'
-    #         [O]: [0]tokens = ['hello']
-    #              [1]key = null_string
-    #              [2]keyPosDesc = null_list
-    #     {what} contains expression (like vim expr-$', but
-    #     no need the leading '$' and replace `{` and `}` with `[` and `]`,
-    #     see :h expr-$'):
-    #         [I]: '&set lines to [&lines]'
-    #         [O]: [0]tokens = ['set lines to ', `&lines`]
-    #              [1]key = 's'
-    #              [2]keyPosDesc = [0, 0]
-    #   If is a list, all item in it will be contact each time UI
-    #   render, all functions will be evaled before contact
-    #   e.g.
-    #       [I]: [ 'hel&lo', '[&lines]', {funcref} ]
-    #       [O]: [0]tokens = ['hello', `&lines`, {funcref}]
-    #            [1]key = 'l'
-    #            [2]keyPosDesc = [0, 3]
-    #---------------------------------------------------------------
-    def _Parse(what: any): list<any>
-        if what->type() == v:t_string
-            return this._ParseText(what)
-        elseif what->type() == v:t_list
-            var tokens: list<any> = []
-            var key: string = null_string
-            var keyPosDesc: list<number> = null_list
-
-            var i = 0
-            for entry in what
-                var t = entry->type()
-                if t == v:t_string
-                    var [tt: any, kk: string, kp: list<number>] =
-                        this._ParseText(entry)
-                    if kk != null
-                        if key != null
-                            throw $'more than one shortcut key found in ''{what}'''
-                        endif
-                        key = kk
-                        keyPosDesc = [i + kp[0], kp[1]]
-                    endif
-                    tokens->extend(tt)
-                    i += tt->len()
-                elseif t == v:t_func
-                    tokens->add(entry)
-                else
-                    tokens->add(string(entry))
-                endif
-            endfor
-
-            return [tokens, key, keyPosDesc]
-        else
-            throw $'{what} should be a string or list'
-        endif
-    enddef
+    # }}} Parse item #
 endclass
-# }}} Parse unit. #
 
 
 # Testing suit. {{{ #
@@ -367,8 +385,10 @@ if 0
                 key: string = null_string, keyPos: number = -1
         ): bool
             var unit: Unit = Unit.new(what)
-            return Equal(unit.text, text) && Equal(unit.key, key) &&
-                Equal(unit.keyPos, keyPos)
+            return Equal(unit.text, text) &&
+                (unit.key != null
+                && Equal(unit.key.char, key)
+                && Equal(unit.key.col, keyPos))
         enddef
 
         return CheckEqual('hello', 'hello') &&

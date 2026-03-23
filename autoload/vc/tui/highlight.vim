@@ -18,9 +18,9 @@ const kTypeList = [
 ]
 
 # Param: {all}: also clear 'linksto'
-export def Clear(color: string, all: bool = false): void
+export def Clear(color: string, clearLink: bool = true): void
     var info = { 'name': color, 'cleared': true }
-    if all
+    if clearLink
         info.linksto = 'NONE'
     endif
     if hlset([info]) < 0
@@ -101,7 +101,7 @@ export def EnableFeature(color: string, feature: any,
 enddef
 
 
-export def Extend(color: string, newColor: string, feature: any = {},
+export def Extend(newColor: string, color: string, feature: any = {},
         types: any = kTypeList): string
     var tmp = hlget(color, true)
     if tmp->empty()
@@ -116,12 +116,12 @@ export def Extend(color: string, newColor: string, feature: any = {},
 enddef
 
 
-export def Combine(fgColor: string, bgColor: string, newColor: string): string
+export def Combine(newColor: string, fgColor: string, bgColor: string): string
     var tmp = hlget(fgColor, true)
     var fgInfo = get(tmp, 0, {})
     tmp = hlget(bgColor, true)
     var bgInfo = get(tmp, 0, {})
-    for key in ['termfg', 'ctermfg', 'guifg']
+    for key in ['ctermfg', 'guifg']
         if fgInfo->has_key(key)
             bgInfo[key] = fgInfo[key]
         endif
@@ -140,7 +140,7 @@ enddef
 if 0
     def Test(): void
         hi CurSearch
-        'CurSearch'->Extend('VcTestHighlight', 'underline')
+        'VcTestHighlight'->Extend('CurSearch', 'underline')
         hi VcTestHighlight
         'VcTestHighlight'->EnableFeature('bold')
         hi VcTestHighlight
@@ -148,7 +148,7 @@ if 0
         hi VcTestHighlight
         hi Comment
         hi CursorLine
-        Combine('Comment', 'CursorLine', 'VcTestHighlight')
+        Combine('VcTestHighlight', 'Comment', 'CursorLine')
             ->EnableFeature({'reverse': false, 'bold': true})
         hi VcTestHighlight
     enddef
