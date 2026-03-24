@@ -76,48 +76,6 @@ enddef
 # }}} Options. #
 
 
-# Keymap. {{{ #
-# Default keymap
-const kKeymap: dict<string> = {
-    "\<esc>": 'ESC',
-    "\<cr>": 'ENTER',
-    "\<space>": 'ENTER',
-    "\<up>": 'UP',
-    "\<down>": 'DOWN',
-    "\<left>": 'LEFT',
-    "\<right>": 'RIGHT',
-    "\<home>": 'HOME',
-    "\<end>": 'END',
-    "\<C-j>": 'DOWN',
-    "\<C-h>": 'LEFT',
-    "\<C-k>": 'UP',
-    "\<C-l>": 'RIGHT',
-    "\<C-n>": 'NEXT',
-    "\<C-p>": 'PREV',
-    "\<C-b>": 'PAGEUP',
-    "\<C-f>": 'PAGEDOWN',
-    "\<C-u>": 'HALFUP',
-    "\<C-d>": 'HALFDOWN',
-    "\<PageUp>": 'PAGEUP',
-    "\<PageDown>": 'PAGEDOWN',
-    #"\<C-g>": 'NOHL',
-    'j': 'DOWN',
-    'k': 'UP',
-    'h': 'LEFT',
-    'l': 'RIGHT',
-    'g': 'TOP',
-    'G': 'BOTTOM',
-    'q': 'ESC',
-    'n': 'NEXT',
-    'N': 'PREV',
-}
-
-export def Keymap(modifiable: bool = false): dict<string>
-    return modifiable ? deepcopy(kKeymap) : kKeymap
-enddef
-# }}} Keymap. #
-
-
 # Move and search. {{{ #
 # NOTE: call `redraw` before call this function,
 # otherwise the cursor may go to wrong position

@@ -48,3 +48,33 @@ export def Inputlist(textlist: list<string>): number
     inputrestore()
     return choice
 enddef
+
+
+#---------------------------------------------------------------
+# getchar, also deal with <C-c>, return the key code
+#---------------------------------------------------------------
+export def Getchar(wait: bool = true): string
+    var code: any = null
+    try
+        if wait
+            code = getchar()
+        else
+            code = getchar(0)
+        endif
+    catch /^Vim:Interrupt$/
+        code = "\<C-c>"
+    endtry
+
+    if type(code) == v:t_number && code == 0  # no code available with no wait
+        # avoid unused call for this function, e.g., call it continuously
+        # even if there are no input event
+        try
+            exec "sleep 15m"
+        catch /^Vim:Interrupt$/
+            code = "\<C-c>"
+        endtry
+    endif
+
+    var ch: string = type(code) == v:t_number ? nr2char(code) : code
+    return ch
+enddef
