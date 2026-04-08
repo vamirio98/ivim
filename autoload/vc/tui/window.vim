@@ -31,7 +31,7 @@ enddef
 export def CalSize(what: any = null, opts: dict<any> = null_dict): dict<any>
     var minWidth: number = opts->get('minwidth', 20)
     var minHeight: number = opts->get('minheight', 1)
-    minWidth = max([minWidth, 20])
+    minWidth = max([minWidth, 4])
     minHeight = max([minHeight, 1])
 
     var maxWidth: number = (&columns * 0.8)->float2nr()
@@ -86,10 +86,14 @@ export def UpdateCursor(winid: number): void
     var winLine: number = ScreenLine(winid)
     var line: number = line('.', winid)
     var lastLine: number = line('$', winid)
-    if winHeight - winLine < margin && lastLine - line >= margin
-        Exec(winid, $"noautocmd normal {margin - (winHeight - winLine)}\<C-e>")
-    elseif winLine - 1 < margin
-        Exec(winid, $"noautocmd normal {margin - (winLine - 1)}\<C-y>")
+    var dBottom = winHeight - winLine
+    var dTop = winLine - 1
+    if dBottom < margin && dTop < margin
+        return
+    elseif dBottom < margin && lastLine - line >= margin
+        Exec(winid, $"noautocmd normal {margin - dBottom}\<C-e>")
+    elseif dTop < margin && dTop < line
+        Exec(winid, $"noautocmd normal {margin - dTop}\<C-y>")
     endif
 enddef
 
