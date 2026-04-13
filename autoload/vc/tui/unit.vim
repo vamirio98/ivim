@@ -26,12 +26,13 @@ endclass
 
 export class Unit
     public var text: string = null_string
+    public var enable: bool = true
     public var key: Key = null_object
     public var pos: Pos = Pos.new()  # left top
     public var width: number = 0
     public var height: number = 0
     public var index: number = -1  # which unit
-    var help: string = null_string
+    public var help: string = null_string
     var isSep: bool = false
 
     var _parts: list<any> = null_list  # all parts of text (string or func)
@@ -77,6 +78,10 @@ export class Unit
         endif
 
         var key = null_string
+        if type(desc.what) == v:t_string && desc.what =~ '^-\+$'
+            this.isSep = true
+            return
+        endif
         [this._parts, key, this._keyPosDesc] = this._Parse(desc.what)
         if key != null
             this.key = Key.new(key)

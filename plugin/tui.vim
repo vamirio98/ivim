@@ -6,7 +6,7 @@ import autoload 'vc/tui/highlight.vim' as vhl
 g:vcTuiBorderChars = get(g:, 'vcTuiBorderChars', ['─', '│', '─', '│', '╭', '╮', '╯', '╰'])
 
 hi! link VcNormal Pmenu
-hi! link VcSel CurSearch
+hi! link VcSel PmenuSel
 vhl.Extend('VcKey', 'VcNormal', 'underline')
 vhl.Extend('VcDisable', 'Comment', {'italic': false})
 vhl.Extend('VcHelp', 'String')

@@ -77,8 +77,9 @@ export def HlClearCmd(): string
     return 'syn clear'
 enddef
 
+# NOTE: use character-offset, set {virtcol} to false if need byte-offset
 export def HlRegionCmd(color: string, row1: number, col1: number,
-        row2: number, col2: number, virtcol: bool = false): string
+        row2: number, col2: number, virtcol: bool = true): string
     var colMode = virtcol ? 'v' : 'c'
     var cmd = $'syn region {color} '
     cmd ..= $'start=/\%{row1}l\%{col1}{colMode}/ '

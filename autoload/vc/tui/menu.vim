@@ -13,18 +13,20 @@ class Menu
     public var name: string = null_string
     public var help: string = null_string
     public var key: Key = null_object
-    public var lv: number
+    public var index: number = -1
+    public var level: number
 
+    var _curIndex: number = 0
+    var _size: number = 0
     var _vertical: bool = true
     var _winid: number = -1
     var _visable: bool = false
     var _entries: list<any> = []
     var _keymap: dict<string> = null_dict
 
-    # {a_entries} list of any, each entry can be string, list, Unit or Menu
-    # string: treated as separater
-    # list: only use as simple entry, use as `Unit`, [what, hook, help]
-    # Unit: a simple entry
+    # {a_entries} list of any, each entry can be param of Unit.new(), Unit
+    # or Menu
+    # param of Unit.new() or Unit: a simple entry
     # Menu: a sub-menu
     def new(a_name: string, a_entries: list<any>, this.help = v:none,
             a_opts: dict<any> = {})
@@ -34,31 +36,29 @@ class Menu
 
         this._vertical = a_opts->get('vertical', true)
         this._keymap = core.Keymap(true)
+        this._size = 0
 
-        var index = 0
         for entry in a_entries
             var t = type(entry)
-            if t == v:t_string
-                if entry == '---'  # separater
-                    this._entries->add('---')
-                else
-                    var item = Unit.new(entry)
-                    var key = item.key
-                    this._entries->add(item)
-                endif
-            elseif t == v:t_list  # Unit item
+            if t == v:t_string || t == v:t_list || t == v:t_dict
                 var item = Unit.new(entry)
-                var key = item.key
                 this._entries->add(item)
+                if item.isSep
+                    item.index = -1
+                    continue
+                endif
+                item.index = this._size
             elseif entry->instanceof(Unit)
                 this._entries->add(entry)
+                entry.index = this._size
             elseif entry->instanceof(Menu)
                 this._entries->add(entry)
+                entry.index = this._size
             else
                 throw $'unsupport type'
             endif
 
-            index += 1
+            this._size += 1
         endfor
 
         var opts: dict<any> = {
@@ -71,32 +71,37 @@ class Menu
             mapping: 0,
             filter: this._Filter,
             callback: this._Callback,
-            cursorline: 1,
-            # hidden: 1,
+            cursorline: 0,
+            hidden: 1,
         }
         opts = opts->extend(a_opts)
 
+        var image = this._BuildImage()
+        opts = opts->extend(window.CalSize(image, {
+            minwidth: 4,
+        }))
+        this._winid = popup_create(image, opts)
+    enddef
+
+    def _BuildImage(): list<string>
         var maxWidth = 4
         for entry in this._entries
-            if type(entry) == v:t_string
-                continue
-            endif
             maxWidth = max([maxWidth, entry.width])
         endfor
-        var content: list<string> = []
+        maxWidth += 2  # padding 1 space in left and right
+        var image: list<string> = []
         for entry in this._entries
-            if type(entry) == v:t_string
-                content->add('-'->repeat(maxWidth))
+            if entry->instanceof(Unit)
+                if entry.isSep
+                    entry.text = repeat('─', maxWidth)
+                else
+                    entry.text = $' {entry.text}{repeat(" ", maxWidth - 1 - entry.width)}'
+                endif
+                entry.width = maxWidth
+                image->add(entry.text)
             endif
-            content->add(entry.text)
         endfor
-
-        opts = opts->extend(window.CalSize(content, {
-            minwidth: 4,
-            maxwidth: maxWidth
-        }))
-        # opts = window.CalSize(content, opts)
-        this._winid = popup_create(content, opts)
+        return image
     enddef
 
     def _Filter(winid: number, a_key: string): bool
@@ -106,16 +111,23 @@ class Menu
         elseif keymap->has_key(a_key)
             var key = keymap[a_key]
             if key == 'ENTER'
-                popup_close(winid, line('.', winid))
-                return true
+                popup_close(winid, this._curIndex + 1)
+                return 1
             else
-                window.MoveCursor(winid, key)
+                if key == 'DOWN'
+                    this._curIndex += 1
+                elseif key == 'UP'
+                    this._curIndex -= 1
+                endif
+                this._curIndex = max([0, min([this._size - 1, this._curIndex])])
+                this.Render()
                 redraw
-                window.UpdateCursor(winid)
-                return true
+                return 1
             endif
         endif
-        return false
+        this.Render()
+        redraw
+        return 0
     enddef
 
     def _Callback(winid: number, result: any): void
@@ -123,10 +135,22 @@ class Menu
     enddef
 
     def Render(): void
+        var cmds: list<string> = [ core.HlClearCmd() ]
+        var row = 1
+        for entry in this._entries
+            if entry.index == this._curIndex
+                cmds->add(core.HlRegionCmd('VcSel', row, 1, row, entry.width + 1))
+            else
+                cmds->add(core.HlRegionCmd('VcNormal', row, 1, row, entry.width + 1))
+            endif
+            row += 1
+        endfor
+        window.Exec(this._winid, cmds)
     enddef
 
     def Show(): void
         this._vertical = true
+        this.Render()
         popup_show(this._winid)
     enddef
 
@@ -136,32 +160,15 @@ class Menu
     enddef
 endclass
 
-def Open(a_entrys: list<any>, a_opts: dict<any> = {}): void
-enddef
-
-var s_menuBar: dict<Menu> = null_dict
-
-def RegisterMenuBar(a_entrys: list<any>, name: string = 'main'): void
-    # s_menuBar[name] = Menu.new(a_entrys)
-enddef
-
-def SwitchMenuBar(name: string): void
-enddef
-
-def OpenMenuBar(): void
+def Open(a_entries: list<any>, a_opts: dict<any> = {}): void
+    var menu = Menu.new('', a_entries, '', a_opts)
+    menu.Show()
 enddef
 
 # Test suit {{{ #
 if 1
     def Test(): void
-        def Cb(winid: number, result: any): void
-            echo $'w: {winid}, r: {result}'
-        enddef
-
-        var menu = Menu.new('test', ['red', 'green', 'blue'])
-        menu.Show()
-
-        # popup_menu(['red', 'green', 'blue'], { 'callback': Cb })
+        Open(['Red', 'Green', '---', 'Blue'])
     enddef
 
     Test()
