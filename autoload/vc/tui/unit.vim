@@ -58,8 +58,14 @@ export class Unit
     #     if no need hook, pass it as null
     #---------------------------------------------------------------
     def new(a_desc: any)
-        def GenHook(a_hook: any): func
-            return a_hook->type() == v:t_string ? this._GenFunc(a_hook) : a_hook
+        def GenHook(a_hook: any): func: void
+            if a_hook->type() == v:t_string
+                return () => {
+                    execute a_hook
+                }
+            else
+                return a_hook
+            endif
         enddef
 
         var desc: dict<any> = {}
@@ -87,7 +93,7 @@ export class Unit
             this.key = Key.new(key)
         endif
         if desc->has_key('hook')
-            this._Hook = GenHook(a_desc.hook)
+            this._Hook = GenHook(desc.hook)
         endif
         this.help = desc->get('help', null_string)
         this.Update()

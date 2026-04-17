@@ -3,6 +3,7 @@ vim9script
 import autoload './core.vim'
 import autoload './unit.vim'
 import autoload './window.vim'
+import autoload './highlight.vim' as vhl
 
 type Unit = unit.Unit
 type Key = unit.Key
@@ -38,18 +39,36 @@ class Menu
         this._keymap = core.Keymap(true)
         this._size = 0
 
+        this._PrepareHl()
+
+        def AppendItem(item: Unit, index: number, row: number): void
+            this._entries->add(item)
+            if item.isSep
+                item.index = -1
+                return
+            endif
+            item.index = index
+            var key = item.key
+            if key != null
+                this._keymap[tolower(key.char)] = $'ACCEPT:{index}'
+            endif
+        enddef
+
+        var row = 0
         for entry in a_entries
             var t = type(entry)
+            var index = this._size
             if t == v:t_string || t == v:t_list || t == v:t_dict
                 var item = Unit.new(entry)
-                this._entries->add(item)
+                AppendItem(item, index, row)
                 if item.isSep
-                    item.index = -1
                     continue
                 endif
-                item.index = this._size
             elseif entry->instanceof(Unit)
-                this._entries->add(entry)
+                AppendItem(entry, index, row)
+                if entry.isSep
+                    continue
+                endif
                 entry.index = this._size
             elseif entry->instanceof(Menu)
                 this._entries->add(entry)
@@ -59,6 +78,7 @@ class Menu
             endif
 
             this._size += 1
+            row += 1
         endfor
 
         var opts: dict<any> = {
@@ -90,15 +110,22 @@ class Menu
         endfor
         maxWidth += 2  # padding 1 space in left and right
         var image: list<string> = []
+        var row = 1
         for entry in this._entries
             if entry->instanceof(Unit)
                 if entry.isSep
                     entry.text = repeat('─', maxWidth)
                 else
                     entry.text = $' {entry.text}{repeat(" ", maxWidth - 1 - entry.width)}'
+                    var key = entry.key
+                    if key != null
+                        key.row = row
+                        key.col = key.col + 1 + 1  # 0-based -> 1-based
+                    endif
                 endif
                 entry.width = maxWidth
                 image->add(entry.text)
+                row += 1
             endif
         endfor
         return image
@@ -108,10 +135,14 @@ class Menu
         const keymap = this._keymap
         if a_key == "\<esc>" || a_key == "\<C-c>"
             popup_close(winid, -1)
-        elseif keymap->has_key(a_key)
-            var key = keymap[a_key]
+            return 1
+        else
+            var key = keymap->get(a_key, a_key)
             if key == 'ENTER'
-                popup_close(winid, this._curIndex + 1)
+                popup_close(winid, this._curIndex)
+                return 1
+            elseif key =~ '^ACCEPT:'
+                popup_close(winid, str2nr(key[7 :]))
                 return 1
             else
                 if key == 'DOWN'
@@ -125,23 +156,51 @@ class Menu
                 return 1
             endif
         endif
-        this.Render()
-        redraw
-        return 0
     enddef
 
-    def _Callback(winid: number, result: any): void
-        echo result
+    def _Callback(winid: number, index: number): void
+        if index < 0
+            return
+        endif
+        for entry in this._entries
+            if entry.index == index
+                entry.Exec()
+                break
+            endif
+        endfor
+    enddef
+
+    def _PrepareHl(): void
+        vhl.Clear('VcKeyNoSel')
+        vhl.Clear('VcKeySel')
+
+        vhl.Extend('VcKeyNoSel', 'VcKey')
+        vhl.Extend('VcKeySel', 'VcSel', 'underline')
     enddef
 
     def Render(): void
         var cmds: list<string> = [ core.HlClearCmd() ]
+        var c1 = null_string
+        var c2 = null_string
         var row = 1
         for entry in this._entries
             if entry.index == this._curIndex
-                cmds->add(core.HlRegionCmd('VcSel', row, 1, row, entry.width + 1))
+                c1 = 'VcSel'
+                c2 = 'VcKeySel'
             else
-                cmds->add(core.HlRegionCmd('VcNormal', row, 1, row, entry.width + 1))
+                c1 = 'VcNormal'
+                c2 = 'VcKeyNoSel'
+            endif
+
+            var key = entry.key
+            if key != null
+                cmds->extend([
+                    core.HlRegionCmd(c1, row, 1, row, key.col),
+                    core.HlRegionCmd(c2, row, key.col, row, key.col + 1),
+                    core.HlRegionCmd(c1, row, key.col + 1, row, entry.width + 1)
+                ])
+            else
+                cmds->add(core.HlRegionCmd(c1, row, 1, row, entry.width + 1))
             endif
             row += 1
         endfor
@@ -168,7 +227,19 @@ enddef
 # Test suit {{{ #
 if 1
     def Test(): void
-        Open(['Red', 'Green', '---', 'Blue'])
+        var item = Unit.new({what: '&Green'})
+        Open([
+            ['&Red', 'echo "red"', 'This is red'],
+            Unit.new({
+                what: '&Green',
+                hook: () => {
+                    execute 'echo "green"'
+                },
+                help: 'This is green'
+            }),
+            '-',
+            {what: '&Blue', hook: 'echo "blue"', help: 'This is blue'}
+        ])
     enddef
 
     Test()
