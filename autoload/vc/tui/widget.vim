@@ -1,78 +1,96 @@
 vim9script
 
 export enum Align
-    Left,  # only for horizontal
-    Right, # only for horizontal
-    Center # for horizontal and vertical
+    Center,
+    Left,
+    Top,
+    Right,
+    Bottom,
+    TopLeft,
+    TopRight,
+    BotLeft,
+    BotRight
 endenum
 
-const Left = Align.Left
-const Right = Align.Right
-const Center = Align.Center
+const kCenter = Align.Center
+const kLeft = Align.Left
+const kTop = Align.Top
+const kRight = Align.Right
+const kBottom = Align.Bottom
+const kTopLeft = Align.TopLeft
+const kTopRight = Align.TopRight
+const kBotLeft = Align.BotLeft
+const kBotRight = Align.BotRight
 
 export interface PureWidget
     var image: list<string>
-    var height: number  # 1-based
-    var width: number
-    var hlInfos: dict<list<any>>  # [rowOff, [colOff1, colOff2, highlight] ]
+    var dispWidth: number
+    var dispHeight: number
+    # [ rowOff, [ [colOff1, colOff2, highlight] ] ]
+    var colors: dict<list<list<any>>>
 
-    var parent: PureWidget
-
-    def SetParent(parent: PureWidget): void
-endinterface
-
-export interface Widget extends PureWidget
-    var align: Align
-
-    def SetAlign(align: Align): void
     def Render(): void
 endinterface
 
+export interface Widget extends PureWidget
+    var parent: PureWidget
+    var align: Align
+    # dispWidth/dispHeight is the actual size of the widget while
+    # width/height is the setting size, if the content size is larger than
+    # setting, dispWidth/dispHeight will grow to fit it, otherwise them
+    # will be same as width/height
+    var width: number
+    var height: number
 
+    def SetWidth(width: number): void
+    def SetHeight(height: number): void
+    def SetParent(parent: PureWidget): void
+    def SetAlign(align: Align): void
+    def SetDirty(dirty: bool): void
+endinterface
+
+
+# Compose({widget} [, {opts}])
 # {opts}:
-#   width: aim width
-#   height: aim height
+#   width/height/align
 # Return:
-#   [image, hlInfos]
-export def ComposeWidget(widget: Widget, a_opts: dict<any>): list<any>
-    var defOpts: dict<any> = {
-        width: 4,
-        height: 1,
-    }
-    var opts = defOpts->extend(a_opts)
-    var width: number = opts.width
-    var height: number = opts.height
+#   [image, colors]
+export def Compose(widget: Widget, opts: dict<any> = {}): list<any>
+    var width: number = opts->get('width', widget.width)
+    var height: number = opts->get('height', widget.height)
+    var align = opts->get('align', widget.align)
     var image: list<string> = widget.image->deepcopy()
-    var hlInfos: dict<list<any>> = widget.hlInfos->deepcopy()
-    var align = widget.align
+    var colors: dict<list<list<any>>> = widget.colors->deepcopy()
 
-    # handle horizontal
-    if align == Left
+    # horizontal
+    if align == kLeft || align == kTopLeft || align == kBotLeft
         for i in image->len()->range()
             var padding = width - image[i]->strdisplaywidth()
             image[i] = image[i] .. repeat(' ', padding)
         endfor
-    elseif align == Right
+    elseif align == kRight || align == kTopRight || align == kBotRight
         for i in image->len()->range()
             var padding = width - image[i]->strdisplaywidth()
             image[i] = repeat(' ', padding) .. image[i]
-            if hlInfos->has_key(i)
-                for j in hlInfos->len()->range()
-                    hlInfos[j][0] += padding
-                    hlInfos[j][1] += padding
+            if colors->has_key(i)
+                var tmp = colors[i]
+                for j in colors->len()->range()
+                    tmp[j][0] += padding
+                    tmp[j][1] += padding
                 endfor
             endif
         endfor
-    else
+    elseif align == kCenter || align == kTop || align == kBottom
         for i in image->len()->range()
             var padding = width - image[i]->strdisplaywidth()
             var lPad: number = padding / 2
             var rPad = padding - lPad
             image[i] = repeat(' ', lPad) .. image[i] .. repeat(' ', rPad)
-            if hlInfos->has_key(i)
-                for j in hlInfos->len()->range()
-                    hlInfos[j][0] += lPad
-                    hlInfos[j][1] += lPad
+            if colors->has_key(i)
+                var tmp = colors[i]
+                for j in colors->len()->range()
+                    tmp[j][0] += lPad
+                    tmp[j][1] += lPad
                 endfor
             endif
         endfor
@@ -80,17 +98,31 @@ export def ComposeWidget(widget: Widget, a_opts: dict<any>): list<any>
 
     # handle vertical
     var padding = height - image->len()
-    var bPad: number = padding / 2
-    var uPad = padding - bPad
-    image = [ repeat(' ', width) ]->repeat(uPad) + image +
-        [ repeat(' ', width) ]->repeat(bPad)
 
-    var tmp: dict<list<any>> = {}
-    for [k, v] in hlInfos->items()
-        tmp[str2nr(k) + uPad] = v
-    endfor
+    if align == kCenter || align == kLeft || align == kRight
+        var bPad: number = padding / 2
+        var uPad = padding - bPad
+        image = [ repeat(' ', width) ]->repeat(uPad) + image +
+            [ repeat(' ', width) ]->repeat(bPad)
 
-    return [image, tmp]
+        var tmp: dict<list<list<any>>> = {}
+        for [k, v] in colors->items()
+            tmp[str2nr(k) + uPad] = v
+        endfor
+        colors = tmp
+    elseif align == kTopLeft || align == kTop || align == kTopRight
+        image += [ repeat(' ', width) ]->repeat(padding)
+    elseif align == kBottom || align == kBotLeft || align == kBotRight
+        image = [ repeat(' ', width) ]->repeat(padding) + image
+
+        var tmp: dict<list<list<any>>> = {}
+        for [k, v] in colors->items()
+            tmp[str2nr(k) + padding] = v
+        endfor
+        colors = tmp
+    endif
+
+    return [image, colors]
 enddef
 
 
@@ -98,14 +130,27 @@ enddef
 if 0
     class W implements Widget
         var image: list<string> = []
+        var dispWidth: number
+        var dispHeight: number
         var height: number
         var width: number
         var parent: PureWidget = null_object
-        var hlInfos: dict<list<any>>
+        var colors: dict<list<list<any>>>
         var align: Align
 
         def new(parent: PureWidget = null_object)
             this.parent = parent
+        enddef
+
+        def SetWidth(width: number): void
+            this.width = width
+        enddef
+
+        def SetHeight(height: number): void
+            this.height = height
+        enddef
+
+        def SetDirty(dirty: bool = true): void
         enddef
 
         def SetAlign(align: Align): void
@@ -121,33 +166,37 @@ if 0
                 a_image : a_image->split("\n")
         enddef
 
-        def SetHlInfo(a_hlInfos: dict<list<any>>): void
-            this.hlInfos = a_hlInfos
+        def SetColor(a_colors: dict<list<list<any>>>): void
+            this.colors = a_colors
         enddef
 
         def Render(): void
         enddef
     endclass
 
-    def TestComposeWidget(): void
+    def TestCompose(): void
         var w1 = W.new()
         w1.SetImage(['hello'])
-        w1.SetHlInfo({ 0: [0, 1, 'a'] })
+        w1.SetColor({ 0: [[0, 1, 'a']] })
+        w1.SetWidth(10)
+        w1.SetHeight(3)
 
         var image: list<string>
         var hlInfo: dict<list<any>>
-        # [image, hlInfo] =
-        #     w1->ComposeWidget({ width: 10, height: 3 })
-        # w1.SetAlign(Left)
-        # [image, hlInfo] =
-        #     w1->ComposeWidget({ width: 10, height: 3})
-        w1.SetAlign(Right)
-        [image, hlInfo] =
-            w1->ComposeWidget({ width: 10, height: 3})
+        # w1.SetAlign(kTop)
+        # w1.SetAlign(kCenter)
+        # w1.SetAlign(kBottom)
+        # w1.SetAlign(kTopLeft)
+        # w1.SetAlign(kLeft)
+        # w1.SetAlign(kBotLeft)
+        # w1.SetAlign(kTopRight)
+        # w1.SetAlign(kRight)
+        w1.SetAlign(kBotRight)
+        [image, hlInfo] = w1->Compose()
         echo image
         echo hlInfo
     enddef
 
-    TestComposeWidget()
+    TestCompose()
 endif
 # }}} Test suit #
