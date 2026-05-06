@@ -1,47 +1,45 @@
 vim9script
 
 import autoload '../util/string.vim' as str
+import autoload './widget.vim' as mw
 
 class KeyPosDesc
     public var seq: number = -1  # in which part
     public var pos: number = -1  # position in the part
 endclass
 
+type PureWidget = mw.PureWidget
+type Widget = mw.Widget
+type Align = mw.Align
 
-export class Pos
-    public var row: number = -1
-    public var col: number = -1
-endclass
+# one-line widget
+export class Unit implements Widget
+    var image: list<string> = []
+    var dispWidth: number = 0
+    var dispHeight: number = 0
+    # NOTE: 'Key' is the fake color for the key, and 'NotKey' is the fake color
+    # for others
+    var colors: dict<list<list<any>>> = {}
+    var width: number = 0
+    var height: number = 0
+    var parent: Widget
+    var align: Align = Align.Center
 
+    var isSep: bool = false
+    var key: string = null_string
 
-export class Key
-    public var char: string = null_string
-    public var row: number = -1
-    public var col: number = -1
-
-    def new(this.char, this.row = v:none, this.col = v:none)
-    enddef
-endclass
-
-
-export class Unit
-    public var text: string = null_string
-    public var enable: bool = true
-    public var key: Key = null_object
-    public var pos: Pos = Pos.new()  # left top
-    public var width: number = 0
-    public var height: number = 0
     public var index: number = -1  # which unit
     public var help: string = null_string
-    var isSep: bool = false
+    public var enable: bool = true
 
     var _parts: list<any> = null_list  # all parts of text (string or func)
     var _keyPosDesc: KeyPosDesc = null_object
-    var _Hook: func = null_function  # toggle when click
+    var _Cb: func = null_function  # toggle when click
+    var _dirty: bool = false
 
 
     #---------------------------------------------------------------
-    # new({desc})
+    # new({desc} [, {parent}])
     #
     # {desc} can be a string, dict or list
     # string: '&x' means 'x' is the shortcut key, '[x]' means 'x' is a expr
@@ -49,22 +47,24 @@ export class Unit
     #         Note: as no hook specified, trigger shortcut will do nothing
     # dict:
     #     what: string, used as above
-    #     hook: [optional] any, hook to execute when click unit
+    #     cb: [optional] any, hook to execute when click unit
     #         - string: like :{hook} in command line
     #         - function: execute the function
     #     help: [optional] string, help text
     # list:
-    #     [what, hook, help]
-    #     if no need hook, pass it as null
+    #     [what, cb, help]
+    #     if no need callback, pass it as null
     #---------------------------------------------------------------
-    def new(a_desc: any)
-        def GenHook(a_hook: any): func: void
-            if a_hook->type() == v:t_string
+    def new(a_desc: any, parent: Widget = null_object)
+        this.parent = parent
+
+        def GenCb(cb: any): func: void
+            if cb->type() == v:t_string
                 return () => {
-                    execute a_hook
+                    execute cb
                 }
             else
-                return a_hook
+                return cb
             endif
         enddef
 
@@ -77,50 +77,61 @@ export class Unit
             desc = a_desc
         elseif t == v:t_list
             desc.what = a_desc[0]
-            if get(a_desc, 1, null) != null
-                desc.hook = a_desc[1]
-            endif
-            desc.help = get(a_desc, 2, null_string)
+            desc.cb = a_desc->get(1, null)
+            desc.help = a_desc->get(2, null_string)
         endif
 
-        var key = null_string
         if type(desc.what) == v:t_string && desc.what =~ '^-\+$'
             this.isSep = true
             return
         endif
-        [this._parts, key, this._keyPosDesc] = this._Parse(desc.what)
-        if key != null
-            this.key = Key.new(key)
-        endif
-        if desc->has_key('hook')
-            this._Hook = GenHook(desc.hook)
+
+        var key = null_string
+        [this._parts, this.key, this._keyPosDesc] = this._Parse(desc.what)
+        if desc->has_key('cb')
+            this._Cb = GenCb(desc.cb)
         endif
         this.help = desc->get('help', null_string)
         this.Update()
+        this.Render()
     enddef
 
 
     def Exec(): void
-        if this._Hook != null_function
-            this._Hook()
+        if this._Cb != null
+            this._Cb()
         endif
     enddef
 
 
-    # Update this.text and this.key
+    # Re-execute _parts, then update image and colors
+    # NOTE: Unit is one-line Widget
     def Update(): void
         var text = ''
+        var colorStart = 0
+
+        this.colors = this.key == null ? {} : { 0: [] }
         var i = 0
         for Entry in this._parts
             if this.key != null && i == this._keyPosDesc.seq
-                this.key.col = text->len() + this._keyPosDesc.pos
+                var keyOff = text->strdisplaywidth() + this._keyPosDesc.pos
+                if keyOff != 0
+                    this.colors[0]->add([0, keyOff - 1, 'NotKey'])
+                endif
+                this.colors[0]->add([keyOff, keyOff, 'Key'])
+                colorStart = keyOff + 1
             endif
             text ..= type(Entry) == v:t_string ? Entry : Entry()
             i += 1
         endfor
-        this.text = text
-        this.width = this.text->strwidth()
-        this.height = this.text->split("\n")->len()
+        this.image = [text]
+        this.dispWidth = text->strdisplaywidth()
+        this.dispHeight = 1
+        if !this.colors->empty()
+            this.colors[0]->add([colorStart, this.dispWidth - 1, 'NotKey'])
+        endif
+
+        this.SetDirty()
     enddef
 
 
@@ -182,14 +193,14 @@ export class Unit
             for entry in what
                 var et = type(entry)
                 if et == v:t_string
-                    var [tmp: any, k: string, kp: list<number>] =
+                    var [tmp: list<any>, k: string, kpd: KeyPosDesc] =
                         this._DoParse(entry)
                     if k != null
                         if key != null
                             throw $"more than one shortcut key found in '{what}'"
                         endif
                         key = k
-                        keyPosDesc = KeyPosDesc.new(i + kp[0], kp[1])
+                        keyPosDesc = KeyPosDesc.new(i + kpd.seq, kpd.pos)
                     endif
                     parts->extend(tmp)
                     i += len(tmp)
@@ -308,10 +319,10 @@ export class Unit
 
     # Return: [text,
     #          key(null_string if not found),
-    #          keyPos(-1 for not found)]
+    #          keyOff(-1 for not found)]
     def _ParseAnd(text: string): list<any>
         var key: string = null_string
-        var keyPos: number = -1
+        var keyOff: number = -1
 
         var tokens = text->split('&&', 1)
         var res: list<string> = []
@@ -329,11 +340,11 @@ export class Unit
                 throw $'expect key following &'
             endif
             key = parts[1][0]
-            keyPos = res->len() + parts[0]->len()
+            keyOff = res->len() + parts[0]->len()
             res->add(parts->join(''))
         endfor
 
-        return [res->join('&'), key, keyPos]
+        return [res->join('&'), key, keyOff]
     enddef
 
 
@@ -344,15 +355,14 @@ export class Unit
         var key: string = null_string
         var keyPosDesc: KeyPosDesc = null_object
 
-        var i = -1
+        var i = 0
         for token in tokens
-            i += 1
             if token[0]  # Expr
                 parts->add(this._GenFunc(token[1]))
                 continue
             endif
 
-            var [t: string, k: string, kp: number] =
+            var [t: string, k: string, ko: number] =
                 this._ParseAnd(token[1])
             parts->add(t)
             if k == null
@@ -362,12 +372,52 @@ export class Unit
                 throw $'more than on shortcut key found in {text}'
             endif
             key = k
-            keyPosDesc = KeyPosDesc.new(i, kp)
+            keyPosDesc = KeyPosDesc.new(i, ko)
+
+            i += 1
         endfor
 
         return [parts, key, keyPosDesc]
     enddef
     # }}} Parse item #
+
+    def Render(): void
+        if !this._dirty
+            return
+        endif
+
+        [this.image, this.colors] = mw.Compose(this)
+        this._dirty = false
+        this.SetDirty()
+    enddef
+
+
+    def SetWidth(width: number): void
+        this.width = width
+        this.SetDirty()
+    enddef
+
+    def SetHeight(height: number): void
+        this.height = height
+        this.SetDirty()
+    enddef
+
+    def SetAlign(align: Align): void
+        this.align = align
+        this.SetDirty()
+    enddef
+
+    def SetParent(parent: Widget): void
+        this.parent = parent
+        this.SetDirty()
+    enddef
+
+    def SetDirty(dirty: bool = true): void
+        this._dirty = dirty
+        if this.parent != null
+            this.parent.SetDirty(true)
+        endif
+    enddef
 endclass
 
 
@@ -393,13 +443,29 @@ if 0
 
         def CheckEqual(
                 what: any, text: string,
-                key: string = null_string, keyPos: number = -1
+                key: string = null_string, keyOff: number = -1
         ): bool
             var unit: Unit = Unit.new(what)
-            return Equal(unit.text, text) &&
-                (unit.key != null
-                && Equal(unit.key.char, key)
-                && Equal(unit.key.col, keyPos))
+            unit.SetAlign(Align.Left)
+            unit.Render()
+
+            def CheckKeyOff(colors: dict<list<list<any>>>,
+                    ko: number = -1): bool
+                if colors->empty()
+                    return false
+                endif
+
+                for c in colors[0]
+                    if c[2] == 'Key'
+                        return c[0] == ko && c[1] == ko
+                    endif
+                endfor
+                return false
+            enddef
+
+            return Equal(unit.image[0], text) &&
+                (key == null || ( Equal(unit.key, key) &&
+                Assert(CheckKeyOff(unit.colors, keyOff)) ))
         enddef
 
         return CheckEqual('hello', 'hello') &&

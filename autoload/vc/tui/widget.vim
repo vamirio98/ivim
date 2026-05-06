@@ -29,11 +29,12 @@ export interface PureWidget
     # [ rowOff, [ [colOff1, colOff2, highlight] ] ]
     var colors: dict<list<list<any>>>
 
+    # NOTE: image should be a rect after Render()
     def Render(): void
 endinterface
 
 export interface Widget extends PureWidget
-    var parent: PureWidget
+    var parent: Widget
     var align: Align
     # dispWidth/dispHeight is the actual size of the widget while
     # width/height is the setting size, if the content size is larger than
@@ -44,10 +45,55 @@ export interface Widget extends PureWidget
 
     def SetWidth(width: number): void
     def SetHeight(height: number): void
-    def SetParent(parent: PureWidget): void
+    def SetParent(parent: Widget): void
     def SetAlign(align: Align): void
     def SetDirty(dirty: bool): void
 endinterface
+
+
+# add space at the end of line to make image a rect
+export def FillImage(a_image: list<string>): list<string>
+    var image: list<string> = []
+    var maxWidth = 0
+
+    for line in a_image
+        maxWidth = max([maxWidth, strdisplaywidth(line)])
+    endfor
+    for line in a_image
+        image->add(line .. repeat(' ', maxWidth - strdisplaywidth(line)))
+    endfor
+
+    return image
+enddef
+
+
+# {a_colors}: PureWidget.colors
+# {opts}:
+#   rOff: row offset
+#   cOff: column offset
+export def MoveColors(a_colors: dict<list<list<any>>>,
+        opts: dict<number>): dict<list<list<any>>>
+    var rOff: number = opts->get('rOff', 0)
+    var cOff: number = opts->get('cOff', 0)
+    var colors: dict<list<list<any>> = {}
+
+    if rOff != 0
+        for [k, v] in a_colors->items()
+            colors[str2nr(k) + rOff] = v
+        endfor
+    endif
+
+    if cOff != 0
+        for [k, v] in a_colors->items()
+            for i in v->len()->range()
+                v[i][0] += cOff
+                v[i][1] += cOff
+            endfor
+        endfor
+    endif
+
+    return colors
+enddef
 
 
 # Compose({widget} [, {opts}])
@@ -66,11 +112,17 @@ export def Compose(widget: Widget, opts: dict<any> = {}): list<any>
     if align == kLeft || align == kTopLeft || align == kBotLeft
         for i in image->len()->range()
             var padding = width - image[i]->strdisplaywidth()
+            if padding <= 0
+                continue
+            endif
             image[i] = image[i] .. repeat(' ', padding)
         endfor
     elseif align == kRight || align == kTopRight || align == kBotRight
         for i in image->len()->range()
             var padding = width - image[i]->strdisplaywidth()
+            if padding <= 0
+                continue
+            endif
             image[i] = repeat(' ', padding) .. image[i]
             if colors->has_key(i)
                 var tmp = colors[i]
@@ -83,6 +135,9 @@ export def Compose(widget: Widget, opts: dict<any> = {}): list<any>
     elseif align == kCenter || align == kTop || align == kBottom
         for i in image->len()->range()
             var padding = width - image[i]->strdisplaywidth()
+            if padding <= 0
+                continue
+            endif
             var lPad: number = padding / 2
             var rPad = padding - lPad
             image[i] = repeat(' ', lPad) .. image[i] .. repeat(' ', rPad)
@@ -98,6 +153,10 @@ export def Compose(widget: Widget, opts: dict<any> = {}): list<any>
 
     # handle vertical
     var padding = height - image->len()
+
+    if padding <= 0
+        return [image, colors]
+    endif
 
     if align == kCenter || align == kLeft || align == kRight
         var bPad: number = padding / 2
@@ -127,6 +186,7 @@ enddef
 
 
 # Test suit {{{ #
+# test Widget in unit.vim
 if 0
     class W implements Widget
         var image: list<string> = []
