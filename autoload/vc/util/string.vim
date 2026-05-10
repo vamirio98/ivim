@@ -120,6 +120,21 @@ export def Matchat(text: string, pat: string,
 enddef
 
 
+export def List(a_text: any): list<string>
+    if type(a_text) == v:t_list
+        var res: list<string> = []
+        for i in a_text->len()->range()
+            res->add(a_text[i]->type() == v:t_string ?
+                a_text[i] : string(a_text[i]))
+        endfor
+        return res
+    else
+        var text: string = type(a_text) == v:t_string ? a_text : string(a_text)
+        return text->split("\n", 1)
+    endif
+enddef
+
+
 # Testing suit. {{{ #
 if 0
     import autoload './debug.vim'

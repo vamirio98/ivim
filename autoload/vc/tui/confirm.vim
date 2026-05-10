@@ -2,109 +2,94 @@ vim9script
 
 import autoload './core.vim'
 import autoload './unit.vim'
-import autoload './util.vim'
 import autoload './window.vim'
 import autoload './highlight.vim' as vhl
 import autoload '../util/interact.vim'
+import autoload '../util/string.vim' as str
+import autoload './widget.vim' as mw
+import autoload './layout.vim' as ml
 
 
 type Unit = unit.Unit
+type Widget = mw.Widget
+type StaticWidget = mw.StaticWidget
+type Align = mw.Align
+type Layout = ml.Layout
+type HBox = ml.HBox
+type VBox = ml.VBox
 
 
-class Dialog
-    var _btns: list<Unit> = null_list
+class BtnLine extends HBox
+    static const kMinBtnWidth = 6
+
+    def new(parent: Layout, choices: string)
+        this.parent = parent
+        this.align = Align.Right
+
+        var maxWidth = 0
+        var i = 1
+        for ch in str.List(choices)
+            var btn = Unit.new($'<{ch}>')
+            btn.SetAlign(Align.Center)
+            btn.SetIndex(i)
+            this.AddWidget(btn)
+            maxWidth = max([maxWidth, btn.dispWidth + 1])
+            i += 1
+        endfor
+
+        for btn in this.widgets
+            btn.SetWidth(maxWidth)
+            btn.Render()
+        endfor
+    enddef
+endclass
+
+
+class Dialog extends VBox
     var _winid: number = -1
-    var _info: dict<any> = null_dict
+    var _btns: BtnLine = null_object
     var _quit: bool = false
     var _keymap: dict<string> = null_dict
-    var _curIndex: number = -1
+    var _curIndex: number = 0
 
-    # {content} should be string | list<string>
-    def new(content: any, choices: string = "&Yes\n&No\n&Cancel",
+    # {question} should be string | list<string>
+    def new(question: any, choices: string = "&Yes\n&No\n&Cancel",
             default: number = 1, title: string = 'Confirm')
+        this.width = 10
+
         var opts: dict<any> = {
-            title: $' {title} '
+            title: $' {title} ',
         }
-        this._btns = this._GenButtons(choices)
-        var btnLine = this._GenBtnLine(this._btns)
-        var what = util.StrListNormalize(content) + ['', '', btnLine]
+
+        var quesWidget = StaticWidget.new(this)
+        quesWidget.SetImage((str.List(question) + [''])->mw.FillImage())
+        quesWidget.SetAlign(Align.Left)
+        this.AddWidget(quesWidget)
+
+        this._btns = BtnLine.new(this, choices)
+        this.AddWidget(this._btns)
+        var maxWidth = max([quesWidget.dispWidth, this._btns.dispWidth])
+        quesWidget.SetWidth(maxWidth)
+        this._btns.SetWidth(maxWidth)
+
+        this.Render()
+
         this._keymap = core.Keymap(true)
-        var index = 0
-        for btn in this._btns
-            var key = btn.key
-            if key != null
-                this._keymap[tolower(key.char)] = $'ACCEPT:{index}'
+        var index = 1
+        for b in this._btns.widgets
+            var btn = <Unit>b
+            if btn.key != null
+                this._keymap[tolower(btn.key)] = $'ACCEPT:{index}'
                 index += 1
             endif
         endfor
-        this._curIndex = default - 1
-        opts = this._InitPopupOpts(what, opts)
-        this._winid = popup_create(what, opts)
-        this._info = popup_getpos(this._winid)
+
+        this._curIndex = default
+        opts = this._InitPopupOpts(this.image, opts)
+        this._winid = popup_create(this.image, opts)
+
         this._PrepareHl()
-
-        for btn in this._btns
-            btn.pos.row = what->len()
-        endfor
     enddef
-
-    # Buttons. {{{ #
-    def _GenButtons(choices: string): list<Unit>
-        var btns: list<Unit> = []
-        var chs = util.StrListNormalize(choices)
-        var index = 0
-        var maxWidth = 4
-
-        for ch in chs
-            var btn = Unit.new(ch)
-            btn.index = index
-            btns->add(btn)
-            maxWidth = max([maxWidth, btn.width])
-            index += 1
-        endfor
-
-        for btn in btns
-            var width = btn.width
-            var padLeft = (maxWidth - width) / 2
-            var padRgiht = maxWidth - width - padLeft
-            btn.text = $'{repeat(" ", padLeft)}{btn.text}{repeat(" ", padRgiht)}'
-            btn.width = maxWidth
-            # NOTE: btn.key.col += padLeft will cause error, strange
-            var key = btn.key
-            if key != null
-                key.col += padLeft
-            endif
-        endfor
-
-        return btns
-    enddef
-
-
-    # NOTE: will modify {btns}
-    def _GenBtnLine(btns: list<Unit>): string
-        var line = ''
-        var hlStart = 1  # column is 1-base
-        var index = len(btns) - 1
-        for btn in btns
-            var text = $'<{btn.text}>'
-            btn.width += 2
-            var key = btn.key
-            if key != null
-                key.col += 1
-                key.col = hlStart + key.col
-            endif
-            btn.pos.col = hlStart
-            hlStart += btn.width
-            line ..= text
-            if index > 0
-                line ..= '  '
-                hlStart += 2
-            endif
-            index -= 1
-        endfor
-        return line
-    enddef
-    # }}} Buttons. #
 
 
     def _Callback(winid: number, result: any): void
@@ -112,12 +97,12 @@ class Dialog
     enddef
 
 
-    def _InitPopupOpts(what: any, opts: dict<any>): dict<any>
+    def _InitPopupOpts(what: list<string>, opts: dict<any>): dict<any>
         var popupOpts: dict<any> = opts->deepcopy()
 
         popupOpts->extend(window.CalSize(what, {
-            minWidth: 40,
-            maxWidth: &columns * 80 / 100,
+            minwidth: this.width,
+            maxwidth: &columns * 80 / 100,
         }))
         popupOpts->extend({
             wrap: 0,
@@ -126,7 +111,7 @@ class Dialog
             close: 'button',
             border: [ 1, 1, 1, 1 ],
             borderchars: g:vcTuiBorderChars,
-            padding: [ 1, 1, 1, 1 ],
+            padding: [ 0, 0, 0, 0 ],
             callback: this._Callback,
         })
 
@@ -143,47 +128,26 @@ class Dialog
     enddef
 
     def Render(): void
-        var cmds: list<string> = []
-        cmds->add(core.HlClearCmd())
-
-        for btn in this._btns
-            var c1 = null_string
-            var c2 = null_string
-            if this._curIndex == btn.index
-                c1 = 'VcSel'
-                c2 = 'VcKeySel'
-            else
-                c1 = 'VcNormal'
-                c2 = 'VcKeyNoSel'
-            endif
-            var row = btn.pos.row
-            var col = btn.pos.col
-            var key = btn.key
-            if key != null
-                cmds->add(core.HlRegionCmd(c1, row, col, row, key.col))
-                col = key.col
-                cmds->add(core.HlRegionCmd(c2, row, col, row, col + 1))
-                col += 1
-                cmds->add(core.HlRegionCmd(c1, row, col,
-                    row, btn.pos.col + btn.width
-                ))
-            else
-                cmds->add(core.HlRegionCmd(
-                    c1,
-                    row, col,
-                    row, col + btn.width
-                ))
-            endif
+        super.Render()
+        var cmds: list<string> = [vhl.ClearCmd()]
+        for [k, v] in this.colors->items()
+            for r in v
+                var row = str2nr(k) + 1
+                var c: string
+                if r[3] == this._curIndex
+                    c = r[2] == 'Key' ? 'VcKeySel' : 'VcSel'
+                else
+                    c = r[2] == 'Key' ? 'VcKeyNoSel' : 'VcNormal'
+                endif
+                cmds->add(vhl.RegionCmd(c, row, r[0] + 1, row, r[1] + 1))
+            endfor
         endfor
-
-        for cmd in cmds
-            window.Exec(this._winid, cmd)
-        endfor
+        window.Exec(this._winid, cmds)
     enddef
 
     def Exec(): number
         var accept = 0
-        const size = this._btns->len()
+        const size = this._btns.widgets->len()
         while true
             this.Render()
             redraw
@@ -195,26 +159,26 @@ class Dialog
                 accept = 0
                 break
             elseif ch == "\<space>" || ch == "\<cr>"
-                accept = this._curIndex + 1
+                accept = this._curIndex
                 break
             else
                 var key = this._keymap->get(ch, ch)
                 if key =~ '^ACCEPT:'
                     key = key->strpart(7)
-                    accept = str2nr(key) + 1
+                    accept = str2nr(key)
                     break
                 elseif key == 'LEFT'
-                    if this._curIndex > 0
+                    if this._curIndex > 1
                         this._curIndex -= 1
                     endif
                 elseif key == 'RIGHT'
-                    if this._curIndex < size - 1
+                    if this._curIndex < size
                         this._curIndex += 1
                     endif
                 elseif key == 'HOME' || key == 'UP' || key == 'PAGEUP'
-                    this._curIndex = 0
+                    this._curIndex = 1
                 elseif key == 'END' || key == 'DOWN' || key == 'PAGEDOWN'
-                    this._curIndex = size - 1
+                    this._curIndex = size
                 endif
             endif
         endwhile

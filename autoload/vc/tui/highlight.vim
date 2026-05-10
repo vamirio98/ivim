@@ -137,6 +137,23 @@ export def Combine(newColor: string, fgColor: string, bgColor: string): string
 enddef
 
 
+export def ClearCmd(): string
+    return 'syn clear'
+enddef
+
+
+# NOTE: use character-offset, set {virtcol} to false if need byte-offset
+# NOTE: region format: [col1, col2)
+export def RegionCmd(color: string, row1: number, col1: number,
+        row2: number, col2: number, virtcol: bool = true): string
+    var colMode = virtcol ? 'v' : 'c'
+    var cmd = $'syn region {color} '
+    cmd ..= $'start=/\%{row1}l\%{col1}{colMode}/ '
+    cmd ..= $'end=/\%{row2}l\%{col2}{colMode}/'
+    return cmd
+enddef
+
+
 if 0
     def Test(): void
         hi CurSearch

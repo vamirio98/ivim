@@ -281,6 +281,11 @@ SetDesc('<leader>up', 'Toggle Paste Mode')
 # }}}
 
 nnoremap Q <Cmd>qa<CR>
+def SourceVimrc(): void
+    g:VcUnletExported()
+    exec 'source %'
+enddef
+nnoremap <space>vs <ScriptCmd>SourceVimrc()<cr>
 
 # windows {{{
 nnoremap <leader>- <C-w>s

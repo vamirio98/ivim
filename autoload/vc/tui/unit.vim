@@ -10,32 +10,24 @@ endclass
 
 type PureWidget = mw.PureWidget
 type Widget = mw.Widget
+type BaseWidget = mw.BaseWidget
 type Align = mw.Align
 
 # one-line widget
-export class Unit implements Widget
-    var image: list<string> = []
-    var dispWidth: number = 0
-    var dispHeight: number = 0
+export class Unit extends BaseWidget
+    # NOTE: colors: [ rowOff, [ [colOff1, colOff2, highlight, index] ] ]
     # NOTE: 'Key' is the fake color for the key, and 'NotKey' is the fake color
     # for others
-    var colors: dict<list<list<any>>> = {}
-    var width: number = 0
-    var height: number = 0
-    var parent: Widget
-    var align: Align = Align.Center
-
     var isSep: bool = false
     var key: string = null_string
 
-    public var index: number = -1  # which unit
+    var index: number = -1  # which unit
     public var help: string = null_string
     public var enable: bool = true
 
     var _parts: list<any> = null_list  # all parts of text (string or func)
     var _keyPosDesc: KeyPosDesc = null_object
     var _Cb: func = null_function  # toggle when click
-    var _dirty: bool = false
 
 
     #---------------------------------------------------------------
@@ -97,6 +89,20 @@ export class Unit implements Widget
     enddef
 
 
+    def SetIndex(index: number): void
+        this.index = index
+        for v in this.colors->values()
+            for c in v
+                if c->len() < 4
+                    c->add(index)
+                else
+                    c[3] = index
+                endif
+            endfor
+        endfor
+    enddef
+
+
     def Exec(): void
         if this._Cb != null
             this._Cb()
@@ -116,9 +122,9 @@ export class Unit implements Widget
             if this.key != null && i == this._keyPosDesc.seq
                 var keyOff = text->strdisplaywidth() + this._keyPosDesc.pos
                 if keyOff != 0
-                    this.colors[0]->add([0, keyOff - 1, 'NotKey'])
+                    this.colors[0]->add([0, keyOff, 'NotKey'])
                 endif
-                this.colors[0]->add([keyOff, keyOff, 'Key'])
+                this.colors[0]->add([keyOff, keyOff + 1, 'Key'])
                 colorStart = keyOff + 1
             endif
             text ..= type(Entry) == v:t_string ? Entry : Entry()
@@ -128,7 +134,7 @@ export class Unit implements Widget
         this.dispWidth = text->strdisplaywidth()
         this.dispHeight = 1
         if !this.colors->empty()
-            this.colors[0]->add([colorStart, this.dispWidth - 1, 'NotKey'])
+            this.colors[0]->add([colorStart, this.dispWidth, 'NotKey'])
         endif
 
         this.SetDirty()
@@ -146,7 +152,6 @@ export class Unit implements Widget
 
 
     # Parse item {{{ #
-
     #---------------------------------------------------------------
     # _Parse({what})
     #
@@ -382,41 +387,14 @@ export class Unit implements Widget
     # }}} Parse item #
 
     def Render(): void
-        if !this._dirty
+        if !this.dirty
             return
         endif
 
         [this.image, this.colors] = mw.Compose(this)
-        this._dirty = false
-        this.SetDirty()
-    enddef
-
-
-    def SetWidth(width: number): void
-        this.width = width
-        this.SetDirty()
-    enddef
-
-    def SetHeight(height: number): void
-        this.height = height
-        this.SetDirty()
-    enddef
-
-    def SetAlign(align: Align): void
-        this.align = align
-        this.SetDirty()
-    enddef
-
-    def SetParent(parent: Widget): void
-        this.parent = parent
-        this.SetDirty()
-    enddef
-
-    def SetDirty(dirty: bool = true): void
-        this._dirty = dirty
-        if this.parent != null
-            this.parent.SetDirty(true)
-        endif
+        this.dispWidth = this.image->len() == 0 ? 0 : this.image[0]->len()
+        this.dispHeight = this.image->len()
+        this.dirty = false
     enddef
 endclass
 

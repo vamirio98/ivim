@@ -1,5 +1,7 @@
 vim9script
 
+import autoload '../util/string.vim' as str
+
 export enum Align
     Center,
     Left,
@@ -27,6 +29,8 @@ export interface PureWidget
     var dispWidth: number
     var dispHeight: number
     # [ rowOff, [ [colOff1, colOff2, highlight] ] ]
+    # NOTE: should contains above infomation at least
+    # NOTE: region format: [colOff1, colOff2)
     var colors: dict<list<list<any>>>
 
     # NOTE: image should be a rect after Render()
@@ -49,6 +53,74 @@ export interface Widget extends PureWidget
     def SetAlign(align: Align): void
     def SetDirty(dirty: bool): void
 endinterface
+
+
+export class BaseWidget implements Widget
+    var image: list<string> = []
+    var dispWidth: number = 0
+    var dispHeight: number = 0
+    var colors: dict<list<list<any>>> = {}
+
+    var parent: Widget = null_object
+    var align: Align = kCenter
+    var width: number = 0
+    var height: number = 0
+
+    var dirty: bool = true
+
+    def Render(): void
+    enddef
+
+    def SetWidth(width: number): void
+        this.width = width
+        this.SetDirty(true)
+    enddef
+
+    def SetHeight(height: number): void
+        this.height = height
+        this.SetDirty(true)
+    enddef
+
+    def SetParent(parent: Widget): void
+        this.parent = parent
+        this.SetDirty(true)
+    enddef
+
+    def SetAlign(align: Align): void
+        this.align = align
+        this.SetDirty(true)
+    enddef
+
+    def SetDirty(dirty: bool = true): void
+        this.dirty = dirty
+        if this.parent != null
+            this.parent.SetDirty(true)
+        endif
+    enddef
+endclass
+
+
+export class StaticWidget extends BaseWidget
+    def new(parent: Widget = null_object)
+        this.parent = parent
+    enddef
+
+    def SetImage(image: any): void
+        this.image = str.List(image)
+        this.SetDirty(true)
+    enddef
+
+    def SetColors(colors: dict<list<list<any>>>): void
+        this.colors = colors->deepcopy()
+        this.SetDirty(true)
+    enddef
+
+    def Render(): void
+        [this.image, this.colors] = Compose(this)
+        this.dispHeight = this.image->len()
+        this.dispWidth = this.dispHeight == 0 ? 0 : this.image[0]->len()
+    enddef
+endclass
 
 
 # add space at the end of line to make image a rect
@@ -75,16 +147,17 @@ export def MoveColors(a_colors: dict<list<list<any>>>,
         opts: dict<number>): dict<list<list<any>>>
     var rOff: number = opts->get('rOff', 0)
     var cOff: number = opts->get('cOff', 0)
-    var colors: dict<list<list<any>> = {}
+    var colors: dict<list<list<any>>> = a_colors->deepcopy()
 
     if rOff != 0
+        colors = {}
         for [k, v] in a_colors->items()
             colors[str2nr(k) + rOff] = v
         endfor
     endif
 
     if cOff != 0
-        for [k, v] in a_colors->items()
+        for [k, v] in colors->items()
             for i in v->len()->range()
                 v[i][0] += cOff
                 v[i][1] += cOff
@@ -126,7 +199,7 @@ export def Compose(widget: Widget, opts: dict<any> = {}): list<any>
             image[i] = repeat(' ', padding) .. image[i]
             if colors->has_key(i)
                 var tmp = colors[i]
-                for j in colors->len()->range()
+                for j in tmp->len()->range()
                     tmp[j][0] += padding
                     tmp[j][1] += padding
                 endfor
@@ -143,7 +216,7 @@ export def Compose(widget: Widget, opts: dict<any> = {}): list<any>
             image[i] = repeat(' ', lPad) .. image[i] .. repeat(' ', rPad)
             if colors->has_key(i)
                 var tmp = colors[i]
-                for j in colors->len()->range()
+                for j in tmp->len()->range()
                     tmp[j][0] += lPad
                     tmp[j][1] += lPad
                 endfor
