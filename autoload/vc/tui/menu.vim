@@ -46,10 +46,10 @@ class Menu extends VBox
             secDesc.help = a_section->get(1, null_string)
         elseif st == v:t_dict
             secDesc = a_section->deepcopy()
-            secDesc.cb = this.Open
         else
             throw $'unsupported type: {st}'
         endif
+        secDesc.cb = this.Open
         this.section = Unit.new(secDesc)
         this._keymap = core.Keymap(true)
 
@@ -61,8 +61,10 @@ class Menu extends VBox
             var t = item->type()
             if t == v:t_string || t == v:t_list || t == v:t_dict
                 tmp = Unit.new(item)
-            else
+            elseif item->instanceof(Unit)
                 tmp = item
+            elseif item->instanceof(Menu)
+                tmp = item.section
             endif
             maxWidth = max([maxWidth, tmp.dispWidth])
             this.AddWidget(tmp)
@@ -203,20 +205,20 @@ if 1
             },
             help: 'This is green'
         })
-        # var menu = Menu.new('sub-menu', [
-        #     ['&Hello', 'echo "hello"', 'Tip 1'],
-        #     '--',
-        #     ['&World', () => {
-        #         execute 'echo "World"'
-        #     }, 'Tip 2'],
-        # ])
+        var menu = Menu.new('sub-menu', [
+            ['&Hello', 'echo "hello"', 'Tip 1'],
+            '--',
+            ['&World', () => {
+                execute 'echo "World"'
+            }, 'Tip 2'],
+        ])
 
         Open([
             ['&Red', 'echo "red"', 'This is red'],
             item,
             '-',
             {what: '&Blue', cb: 'echo "blue"', help: 'This is blue'},
-            # menu,
+            menu,
         ])
     enddef
 

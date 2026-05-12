@@ -103,7 +103,7 @@ export class Unit extends BaseWidget
         var text = ''
         var colorStart = 0
 
-        this.colors = this.key == null ? {} : { 0: [] }
+        this.colors = { 0: [] }
         var i = 0
         for Entry in this._parts
             if this.key != null && i == this._keyPosDesc.seq
@@ -120,9 +120,7 @@ export class Unit extends BaseWidget
         this.image = [text]
         this.dispWidth = text->strdisplaywidth()
         this.dispHeight = 1
-        if !this.colors->empty()
-            this.colors[0]->add([colorStart, this.dispWidth, 'VcFcNotKey'])
-        endif
+        this.colors[0]->add([colorStart, this.dispWidth, 'VcFcNotKey'])
 
         this.SetDirty()
     enddef
