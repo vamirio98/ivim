@@ -378,8 +378,12 @@ export class Unit extends BaseWidget
             return
         endif
 
+        if this.isSep
+            this.image = [ g:vcTuiBorderChars[0]->repeat(this.width) ]
+        endif
         [this.image, this.colors] = mw.Compose(this)
-        this.dispWidth = this.image->len() == 0 ? 0 : this.image[0]->len()
+        this.dispWidth = this.image->len() == 0 ?
+            0 : this.image[0]->strdisplaywidth()
         this.dispHeight = this.image->len()
         this.dirty = false
     enddef

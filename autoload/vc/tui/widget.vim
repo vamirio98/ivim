@@ -126,7 +126,8 @@ export class StaticWidget extends BaseWidget
     def Render(): void
         [this.image, this.colors] = Compose(this)
         this.dispHeight = this.image->len()
-        this.dispWidth = this.dispHeight == 0 ? 0 : this.image[0]->len()
+        this.dispWidth = this.dispHeight == 0 ?
+            0 : this.image[0]->strdisplaywidth()
     enddef
 endclass
 

@@ -103,7 +103,8 @@ export class VBox extends BaseWidget implements Layout
             height: max([this.height, totalHeight])
         })
         this.dispHeight = this.image->len()
-        this.dispWidth = this.dispHeight == 0 ? 0 : this.image[0]->len()
+        this.dispWidth = this.dispHeight == 0 ?
+            0 : this.image[0]->strdisplaywidth()
 
         this.dirty = false
     enddef
@@ -186,7 +187,8 @@ export class HBox extends BaseWidget implements Layout
             height: max([this.height, maxHeight])
         })
         this.dispHeight = this.image->len()
-        this.dispWidth = this.dispHeight == 0 ? 0 : this.image[0]->len()
+        this.dispWidth = this.dispHeight == 0 ?
+            0 : this.image[0]->strdisplaywidth()
 
         this.dirty = false
     enddef
