@@ -61,6 +61,7 @@ export class VBox extends BaseWidget implements Layout
         this.SetDirty()
     enddef
 
+    # NOTE: each color list will append a widget's `id` to identify it
     def Render(): void
         if !this.dirty
             return
@@ -91,9 +92,9 @@ export class VBox extends BaseWidget implements Layout
                 mw.MoveColors(wColors, { rOff: row })
             for [k, v] in tmpColors->items()
                 if colors->has_key(k)
-                    colors[k] += v
+                    colors[k] += v->map((_, value) => value->add(w.id))
                 else
-                    colors[k] = v
+                    colors[k] = v->map((_, value) => value->add(w.id))
                 endif
             endfor
             row += w.dispHeight
@@ -137,6 +138,7 @@ export class HBox extends BaseWidget implements Layout
         this.SetDirty()
     enddef
 
+    # NOTE: each color list will append a widget's `id` to identify it
     def Render(): void
         if !this.dirty
             return
@@ -170,9 +172,9 @@ export class HBox extends BaseWidget implements Layout
                 mw.MoveColors(wColors, { cOff: col })
             for [k, v] in tmpColors->items()
                 if colors->has_key(k)
-                    colors[k] += v
+                    colors[k] += v->map((_, value) => value->add(w.id))
                 else
-                    colors[k] = v
+                    colors[k] = v->map((_, value) => value->add(w.id))
                 endif
             endfor
             col += w.dispWidth

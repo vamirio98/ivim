@@ -46,12 +46,15 @@ export interface Widget extends PureWidget
     # will be same as width/height
     var width: number
     var height: number
+    var dirty: bool
+    var id: number
 
     def SetWidth(width: number): void
     def SetHeight(height: number): void
     def SetParent(parent: Widget): void
     def SetAlign(align: Align): void
     def SetDirty(dirty: bool): void
+    def SetId(id: number): void
 endinterface
 
 
@@ -67,6 +70,7 @@ export class BaseWidget implements Widget
     var height: number = 0
 
     var dirty: bool = true
+    var id: number = -1
 
     def Render(): void
     enddef
@@ -96,6 +100,10 @@ export class BaseWidget implements Widget
         if this.parent != null
             this.parent.SetDirty(true)
         endif
+    enddef
+
+    def SetId(id: number): void
+        this.id = id
     enddef
 endclass
 
@@ -174,6 +182,7 @@ enddef
 #   width/height/align
 # Return:
 #   [image, colors]
+#   NOTE: will add fake color VcFcPadding to highlight the padding area
 export def Compose(widget: Widget, opts: dict<any> = {}): list<any>
     var width: number = opts->get('width', widget.width)
     var height: number = opts->get('height', widget.height)
@@ -189,6 +198,7 @@ export def Compose(widget: Widget, opts: dict<any> = {}): list<any>
                 continue
             endif
             image[i] = image[i] .. repeat(' ', padding)
+            colors[i]->add([ width - padding, width, 'VcFcPadding' ])
         endfor
     elseif align == kRight || align == kTopRight || align == kBotRight
         for i in image->len()->range()
@@ -204,6 +214,7 @@ export def Compose(widget: Widget, opts: dict<any> = {}): list<any>
                     tmp[j][1] += padding
                 endfor
             endif
+            colors[i]->insert([0, padding, 'VcFcPadding'], 0)
         endfor
     elseif align == kCenter || align == kTop || align == kBottom
         for i in image->len()->range()
@@ -221,6 +232,12 @@ export def Compose(widget: Widget, opts: dict<any> = {}): list<any>
                     tmp[j][1] += lPad
                 endfor
             endif
+            if lPad > 0
+                colors[i]->insert([0, lPad, 'VcFcPadding'], 0)
+            endif
+            if rPad > 0
+                colors[i]->add([ width - rPad, width, 'VcFcPadding' ])
+            endif
         endfor
     endif
 
@@ -231,9 +248,11 @@ export def Compose(widget: Widget, opts: dict<any> = {}): list<any>
         return [image, colors]
     endif
 
+    var uPad: number = 0
+    var bPad: number = 0
     if align == kCenter || align == kLeft || align == kRight
-        var bPad: number = padding / 2
-        var uPad = padding - bPad
+        bPad = padding / 2
+        uPad = padding - bPad
         image = [ repeat(' ', width) ]->repeat(uPad) + image +
             [ repeat(' ', width) ]->repeat(bPad)
 
@@ -244,6 +263,7 @@ export def Compose(widget: Widget, opts: dict<any> = {}): list<any>
         colors = tmp
     elseif align == kTopLeft || align == kTop || align == kTopRight
         image += [ repeat(' ', width) ]->repeat(padding)
+        bPad = padding
     elseif align == kBottom || align == kBotLeft || align == kBotRight
         image = [ repeat(' ', width) ]->repeat(padding) + image
 
@@ -252,6 +272,18 @@ export def Compose(widget: Widget, opts: dict<any> = {}): list<any>
             tmp[str2nr(k) + padding] = v
         endfor
         colors = tmp
+        uPad = padding
+    endif
+
+    if uPad > 0
+        for i in range(uPad)
+            colors[i] = [ [0, width, 'VcFcPadding'] ]
+        endfor
+    endif
+    if bPad > 0
+        for i in range(bPad)
+            colors[height - 1 - i] = [ [0, width, 'VcFcPadding'] ]
+        endfor
     endif
 
     return [image, colors]

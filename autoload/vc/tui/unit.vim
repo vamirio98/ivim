@@ -15,13 +15,12 @@ type Align = mw.Align
 
 # one-line widget
 export class Unit extends BaseWidget
-    # NOTE: colors: [ rowOff, [ [colOff1, colOff2, highlight, index] ] ]
+    # NOTE: colors: [ rowOff, [ [colOff1, colOff2, highlight] ] ]
     # NOTE: 'Key' is the fake color for the key, and 'NotKey' is the fake color
     # for others
     var isSep: bool = false
     var key: string = null_string
 
-    var index: number = -1  # which unit
     public var help: string = null_string
     public var enable: bool = true
 
@@ -66,11 +65,13 @@ export class Unit extends BaseWidget
         if t == v:t_string
             desc.what = a_desc
         elseif t == v:t_dict
-            desc = a_desc
+            desc = a_desc->deepcopy()
         elseif t == v:t_list
             desc.what = a_desc[0]
             desc.cb = a_desc->get(1, null)
             desc.help = a_desc->get(2, null_string)
+        else
+            throw $'unsupport type: {t}'
         endif
 
         if type(desc.what) == v:t_string && desc.what =~ '^-\+$'
@@ -86,20 +87,6 @@ export class Unit extends BaseWidget
         this.help = desc->get('help', null_string)
         this.Update()
         this.Render()
-    enddef
-
-
-    def SetIndex(index: number): void
-        this.index = index
-        for v in this.colors->values()
-            for c in v
-                if c->len() < 4
-                    c->add(index)
-                else
-                    c[3] = index
-                endif
-            endfor
-        endfor
     enddef
 
 
@@ -435,7 +422,7 @@ if 0
 
                 for c in colors[0]
                     if c[2] == 'Key'
-                        return c[0] == ko && c[1] == ko
+                        return c[0] == ko && c[1] == ko + 1
                     endif
                 endfor
                 return false

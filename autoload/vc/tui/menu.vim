@@ -4,85 +4,88 @@ import autoload './core.vim'
 import autoload './unit.vim'
 import autoload './window.vim'
 import autoload './highlight.vim' as vhl
+import autoload './widget.vim' as mw
+import autoload './layout.vim' as ml
 
 type Unit = unit.Unit
-type Key = unit.Key
+type Widget = mw.Widget
+type Align = mw.Align
+type VBox = ml.VBox
 
-const s_zindex: number = 1000  # default priority of the menu
+const kDefZindex: number = 1000  # default priority of the menu
+const kDeltaZindex: number = 5
 
-class Menu
-    public var name: string = null_string
-    public var help: string = null_string
-    public var key: Key = null_object
-    public var index: number = -1
-    public var level: number
+class Menu extends VBox
+    var winid: number = -1
+    var section: Unit = null_object
+    var zindex: number = kDefZindex
+    var visable: bool = false
+    var active: bool = true
 
-    var _curIndex: number = 0
     var _size: number = 0
-    var _vertical: bool = true
-    var _winid: number = -1
-    var _visable: bool = false
-    var _entries: list<any> = []
+    var _curIndex: number = 0  # -1 means no select
     var _keymap: dict<string> = null_dict
+    var _cbs: dict<func> = {}
 
-    # {a_entries} list of any, each entry can be param of Unit.new(), Unit
+    # {a_section}: like Unit.new.what, can be following type:
+    #   string
+    #   list: [what, help]
+    #   dict: { what, help }
+    # {a_items} list of any, each entry can be param of Unit.new(), Unit
     # or Menu
-    # param of Unit.new() or Unit: a simple entry
-    # Menu: a sub-menu
-    def new(a_name: string, a_entries: list<any>, this.help = v:none,
-            a_opts: dict<any> = {})
-        var name = Unit.new(a_name)
-        this.name = name.text
-        this.key = name.key
-
-        this._vertical = a_opts->get('vertical', true)
+    #   param of Unit.new() or Unit: a simple entry
+    #   Menu: a sub-menu
+    # TODO: {a_opts} support filetype
+    def new(a_section: any, a_items: list<any>, a_opts: dict<any> = {})
+        this.SetAlign(Align.Left)
+        var secDesc: dict<any> = {}
+        var st = a_section->type()
+        if st == v:t_string
+            secDesc.what = a_section
+        elseif st == v:t_list
+            secDesc.what = a_section[0]
+            secDesc.help = a_section->get(1, null_string)
+        elseif st == v:t_dict
+            secDesc = a_section->deepcopy()
+            secDesc.cb = this.Open
+        else
+            throw $'unsupported type: {st}'
+        endif
+        this.section = Unit.new(secDesc)
         this._keymap = core.Keymap(true)
-        this._size = 0
+
+        var index = 0
+        for item in a_items
+            var tmp: Unit = null_object
+
+            var t = item->type()
+            if t == v:t_string || t == v:t_list || t == v:t_dict
+                tmp = Unit.new(item)
+            else
+                tmp = item
+            endif
+            tmp.SetAlign(Align.Left)
+            this.AddWidget(tmp)
+
+            if tmp.isSep
+                continue
+            endif
+
+            tmp.SetId(index)
+            this._cbs[index] = tmp.Exec
+            if tmp.key != null
+                this._keymap[tolower(tmp.key)] = $'ACCEPT:{index}'
+            endif
+
+            index += 1
+        endfor
+        this._size = index
 
         this._PrepareHl()
-
-        def AppendItem(item: Unit, index: number, row: number): void
-            this._entries->add(item)
-            if item.isSep
-                item.index = -1
-                return
-            endif
-            item.index = index
-            var key = item.key
-            if key != null
-                this._keymap[tolower(key.char)] = $'ACCEPT:{index}'
-            endif
-        enddef
-
-        var row = 0
-        for entry in a_entries
-            var t = type(entry)
-            var index = this._size
-            if t == v:t_string || t == v:t_list || t == v:t_dict
-                var item = Unit.new(entry)
-                AppendItem(item, index, row)
-                if item.isSep
-                    continue
-                endif
-            elseif entry->instanceof(Unit)
-                AppendItem(entry, index, row)
-                if entry.isSep
-                    continue
-                endif
-                entry.index = this._size
-            elseif entry->instanceof(Menu)
-                this._entries->add(entry)
-                entry.index = this._size
-            else
-                throw $'unsupport type'
-            endif
-
-            this._size += 1
-            row += 1
-        endfor
+        this.Render()
 
         var opts: dict<any> = {
-            zindex: 200,
+            zindex: this.zindex,
             drag: 0,
             wrap: 0,
             border: [ 1, 1, 1, 1 ],
@@ -94,41 +97,10 @@ class Menu
             cursorline: 0,
             hidden: 1,
         }
-        opts = opts->extend(a_opts)
-
-        var image = this._BuildImage()
-        opts = opts->extend(window.CalSize(image, {
+        opts = opts->extend(window.CalSize(this.image, {
             minwidth: 4,
         }))
-        this._winid = popup_create(image, opts)
-    enddef
-
-    def _BuildImage(): list<string>
-        var maxWidth = 4
-        for entry in this._entries
-            maxWidth = max([maxWidth, entry.width])
-        endfor
-        maxWidth += 2  # padding 1 space in left and right
-        var image: list<string> = []
-        var row = 1
-        for entry in this._entries
-            if entry->instanceof(Unit)
-                if entry.isSep
-                    entry.text = repeat('─', maxWidth)
-                else
-                    entry.text = $' {entry.text}{repeat(" ", maxWidth - 1 - entry.width)}'
-                    var key = entry.key
-                    if key != null
-                        key.row = row
-                        key.col = key.col + 1 + 1  # 0-based -> 1-based
-                    endif
-                endif
-                entry.width = maxWidth
-                image->add(entry.text)
-                row += 1
-            endif
-        endfor
-        return image
+        this.winid = popup_create(this.image, opts)
     enddef
 
     def _Filter(winid: number, a_key: string): bool
@@ -162,12 +134,8 @@ class Menu
         if index < 0
             return
         endif
-        for entry in this._entries
-            if entry.index == index
-                entry.Exec()
-                break
-            endif
-        endfor
+        var F = this._cbs[index]
+        F()
     enddef
 
     def _PrepareHl(): void
@@ -179,66 +147,67 @@ class Menu
     enddef
 
     def Render(): void
-        var cmds: list<string> = [ core.HlClearCmd() ]
-        var c1 = null_string
-        var c2 = null_string
-        var row = 1
-        for entry in this._entries
-            if entry.index == this._curIndex
-                c1 = 'VcSel'
-                c2 = 'VcKeySel'
-            else
-                c1 = 'VcNormal'
-                c2 = 'VcKeyNoSel'
-            endif
-
-            var key = entry.key
-            if key != null
-                cmds->extend([
-                    core.HlRegionCmd(c1, row, 1, row, key.col),
-                    core.HlRegionCmd(c2, row, key.col, row, key.col + 1),
-                    core.HlRegionCmd(c1, row, key.col + 1, row, entry.width + 1)
-                ])
-            else
-                cmds->add(core.HlRegionCmd(c1, row, 1, row, entry.width + 1))
-            endif
-            row += 1
+        super.Render()
+        var cmds: list<string> = [ vhl.ClearCmd() ]
+        var prevIndex = 0
+        for [k, v] in this.colors->items()
+            for r in v
+                var row = str2nr(k) + 1
+                var c: string
+                # TODO: deal with padding
+                if r[3] == this._curIndex
+                    c = r[2] == 'Key' ? 'VcKeySel' : 'VcSel'
+                else
+                    c = r[2] == 'Key' ? 'VcKeyNoSel' : 'VcNormal'
+                endif
+                cmds->add(vhl.RegionCmd(c, row, r[0] + 1, row, r[1] + 1))
+            endfor
         endfor
-        window.Exec(this._winid, cmds)
+        window.Exec(this.winid, cmds)
     enddef
 
-    def Show(): void
-        this._vertical = true
+    def Open(): void
+        this.visable = true
         this.Render()
-        popup_show(this._winid)
+        popup_setoptions(this.winid, { zindex: this.zindex })
+        popup_show(this.winid)
     enddef
 
-    def Hide(): void
-        this._vertical = false
-        popup_hide(this._winid)
+    def Close(): void
+        this.visable = false
+        popup_hide(this.winid)
     enddef
 endclass
 
 def Open(a_entries: list<any>, a_opts: dict<any> = {}): void
-    var menu = Menu.new('', a_entries, '', a_opts)
-    menu.Show()
+    var menu = Menu.new('', a_entries, a_opts)
+    menu.Open()
 enddef
 
 # Test suit {{{ #
 if 1
     def Test(): void
-        var item = Unit.new({what: '&Green'})
+        var item = Unit.new({
+            what: '&Green',
+            cb: () => {
+                execute 'echo "green"'
+            },
+            help: 'This is green'
+        })
+        # var menu = Menu.new('sub-menu', [
+        #     ['&Hello', 'echo "hello"', 'Tip 1'],
+        #     '--',
+        #     ['&World', () => {
+        #         execute 'echo "World"'
+        #     }, 'Tip 2'],
+        # ])
+
         Open([
             ['&Red', 'echo "red"', 'This is red'],
-            Unit.new({
-                what: '&Green',
-                hook: () => {
-                    execute 'echo "green"'
-                },
-                help: 'This is green'
-            }),
+            item,
             '-',
-            {what: '&Blue', hook: 'echo "blue"', help: 'This is blue'}
+            {what: '&Blue', cb: 'echo "blue"', help: 'This is blue'},
+            # menu,
         ])
     enddef
 
