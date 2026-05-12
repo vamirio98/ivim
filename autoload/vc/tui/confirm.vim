@@ -26,20 +26,14 @@ class BtnLine extends HBox
         this.parent = parent
         this.align = Align.Right
 
-        var maxWidth = 0
         var i = 1
         for ch in str.List(choices)
             var btn = Unit.new($'<{ch}>')
             btn.SetAlign(Align.Center)
-            btn.SetIndex(i)
+            btn.SetId(i)
+            btn.SetWidth(btn.dispWidth + 2)
             this.AddWidget(btn)
-            maxWidth = max([maxWidth, btn.dispWidth + 1])
             i += 1
-        endfor
-
-        for btn in this.widgets
-            btn.SetWidth(maxWidth)
-            btn.Render()
         endfor
     enddef
 endclass
@@ -75,12 +69,10 @@ class Dialog extends VBox
         this.Render()
 
         this._keymap = core.Keymap(true)
-        var index = 1
         for b in this._btns.widgets
             var btn = <Unit>b
             if btn.key != null
-                this._keymap[tolower(btn.key)] = $'ACCEPT:{index}'
-                index += 1
+                this._keymap[tolower(btn.key)] = $'ACCEPT:{btn.id}'
             endif
         endfor
 

@@ -198,7 +198,8 @@ export def Compose(widget: Widget, opts: dict<any> = {}): list<any>
                 continue
             endif
             image[i] = image[i] .. repeat(' ', padding)
-            colors[i]->add([ width - padding, width, 'VcFcPadding' ])
+            colors[i] = colors->get(i, []) +
+                [ [width - padding, width, 'VcFcPadding'] ]
         endfor
     elseif align == kRight || align == kTopRight || align == kBotRight
         for i in image->len()->range()
@@ -214,7 +215,7 @@ export def Compose(widget: Widget, opts: dict<any> = {}): list<any>
                     tmp[j][1] += padding
                 endfor
             endif
-            colors[i]->insert([0, padding, 'VcFcPadding'], 0)
+            colors[i] = [ [0, padding, 'VcFcPadding'] ] + colors->get(i, [])
         endfor
     elseif align == kCenter || align == kTop || align == kBottom
         for i in image->len()->range()
@@ -233,10 +234,11 @@ export def Compose(widget: Widget, opts: dict<any> = {}): list<any>
                 endfor
             endif
             if lPad > 0
-                colors[i]->insert([0, lPad, 'VcFcPadding'], 0)
+                colors[i] = [ [0, lPad, 'VcFcPadding'] ] + colors->get(i, [])
             endif
             if rPad > 0
-                colors[i]->add([ width - rPad, width, 'VcFcPadding' ])
+                colors[i] = colors->get(i, []) +
+                    [ [width - rPad, width, 'VcFcPadding'] ]
             endif
         endfor
     endif
