@@ -37,7 +37,6 @@ class Menu extends VBox
     #   Menu: a sub-menu
     # TODO: {a_opts} support filetype
     def new(a_section: any, a_items: list<any>, a_opts: dict<any> = {})
-        this.SetAlign(Align.Left)
         var secDesc: dict<any> = {}
         var st = a_section->type()
         if st == v:t_string
@@ -55,6 +54,7 @@ class Menu extends VBox
         this._keymap = core.Keymap(true)
 
         var index = 0
+        var maxWidth = 0
         for item in a_items
             var tmp: Unit = null_object
 
@@ -64,7 +64,7 @@ class Menu extends VBox
             else
                 tmp = item
             endif
-            tmp.SetAlign(Align.Left)
+            maxWidth = max([maxWidth, tmp.dispWidth])
             this.AddWidget(tmp)
 
             if tmp.isSep
@@ -80,6 +80,16 @@ class Menu extends VBox
             index += 1
         endfor
         this._size = index
+
+        for w in this.widgets
+            w.SetAlign(Align.Left)
+            w.SetWidth(maxWidth)
+            w.Render()
+            w.SetAlign(Align.Center)
+            w.SetWidth(maxWidth + 2)
+            w.Render()
+        endfor
+        this.SetAlign(Align.Center)
 
         this._PrepareHl()
         this.Render()
@@ -154,7 +164,6 @@ class Menu extends VBox
             for r in v
                 var row = str2nr(k) + 1
                 var c: string
-                # TODO: deal with padding
                 if r[3] == this._curIndex
                     c = r[2] == 'Key' ? 'VcKeySel' : 'VcSel'
                 else

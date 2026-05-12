@@ -68,17 +68,13 @@ export class VBox extends BaseWidget implements Layout
         endif
 
         # first, call all sub-widgets' Render() to update image
-        var dispWidth = this.width
-        var dispHeight = 0
+        var maxWidth = 0
+        var totalHeight = 0
         for w in this.widgets
             w.Render()
-            dispWidth = max([dispWidth, w.dispWidth])
-            dispHeight += w.dispHeight
+            maxWidth = max([maxWidth, w.dispWidth])
+            totalHeight += w.dispHeight
         endfor
-        dispHeight = max([dispHeight, this.height])
-
-        this.dispWidth = dispWidth
-        this.dispHeight = dispHeight
 
         # sencond, render
         var row = 0
@@ -86,7 +82,7 @@ export class VBox extends BaseWidget implements Layout
         var colors: dict<list<list<any>>> = {}
 
         for w in this.widgets
-            var [wImg, wColors] = mw.Compose(w, { width: dispWidth })
+            var [wImg, wColors] = mw.Compose(w, { width: maxWidth })
             image += wImg
             var tmpColors: dict<list<list<any>>> =
                 mw.MoveColors(wColors, { rOff: row })
@@ -99,10 +95,17 @@ export class VBox extends BaseWidget implements Layout
             endfor
             row += w.dispHeight
         endfor
-
-        this.dirty = false
         this.image = image
         this.colors = colors
+
+        [this.image, this.colors] = mw.Compose(this, {
+            width: max([this.width, maxWidth]),
+            height: max([this.height, totalHeight])
+        })
+        this.dispHeight = this.image->len()
+        this.dispWidth = this.dispHeight == 0 ? 0 : this.image[0]->len()
+
+        this.dirty = false
     enddef
 endclass
 
@@ -145,25 +148,21 @@ export class HBox extends BaseWidget implements Layout
         endif
 
         # first, call all sub-widgets' Render() to update image
-        var dispWidth = 0
-        var dispHeight = this.height
+        var totalWidth = 0
+        var maxHeight = this.height
         for w in this.widgets
             w.Render()
-            dispHeight = max([dispHeight, w.dispHeight])
-            dispWidth += w.dispWidth
+            maxHeight = max([maxHeight, w.dispHeight])
+            totalWidth += w.dispWidth
         endfor
-        dispWidth = max([dispWidth, this.width])
-
-        this.dispWidth = dispWidth
-        this.dispHeight = dispHeight
 
         # sencond, render
         var col = 0
-        var image: list<string> = ['']->repeat(dispHeight)
+        var image: list<string> = ['']->repeat(maxHeight)
         var colors: dict<list<list<any>>> = {}
 
         for w in this.widgets
-            var [wImg, wColors] = mw.Compose(w, { height: dispHeight })
+            var [wImg, wColors] = mw.Compose(w, { height: maxHeight })
             for i in wImg->len()->range()
                 image[i] ..= wImg[i]
             endfor
@@ -179,10 +178,17 @@ export class HBox extends BaseWidget implements Layout
             endfor
             col += w.dispWidth
         endfor
-
-        this.dirty = false
         this.image = image
         this.colors = colors
+
+        [this.image, this.colors] = mw.Compose(this, {
+            width: max([this.width, totalWidth]),
+            height: max([this.height, maxHeight])
+        })
+        this.dispHeight = this.image->len()
+        this.dispWidth = this.dispHeight == 0 ? 0 : this.image[0]->len()
+
+        this.dirty = false
     enddef
 endclass
 

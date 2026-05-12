@@ -49,7 +49,7 @@ class Dialog extends VBox
     # {question} should be string | list<string>
     def new(question: any, choices: string = "&Yes\n&No\n&Cancel",
             default: number = 1, title: string = 'Confirm')
-        this.width = 10
+        this.width = 30
 
         var opts: dict<any> = {
             title: $' {title} ',
@@ -62,7 +62,8 @@ class Dialog extends VBox
 
         this._btns = BtnLine.new(this, choices)
         this.AddWidget(this._btns)
-        var maxWidth = max([quesWidget.dispWidth, this._btns.dispWidth])
+        var maxWidth = max([quesWidget.dispWidth,
+            this._btns.dispWidth, this.width])
         quesWidget.SetWidth(maxWidth)
         this._btns.SetWidth(maxWidth)
 
@@ -124,6 +125,9 @@ class Dialog extends VBox
         var cmds: list<string> = [vhl.ClearCmd()]
         for [k, v] in this.colors->items()
             for r in v
+                if r[2] == 'VcFcPadding'
+                    continue
+                endif
                 var row = str2nr(k) + 1
                 var c: string
                 if r[3] == this._curIndex

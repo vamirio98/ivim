@@ -132,9 +132,10 @@ endclass
 
 
 # add space at the end of line to make image a rect
-export def FillImage(a_image: list<string>): list<string>
+# {width}: the min width to fill
+export def FillImage(a_image: list<string>, width: number = -1): list<string>
     var image: list<string> = []
-    var maxWidth = 0
+    var maxWidth = width
 
     for line in a_image
         maxWidth = max([maxWidth, strdisplaywidth(line)])
