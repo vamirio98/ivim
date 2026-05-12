@@ -153,7 +153,7 @@ class Menu extends VBox
         vhl.Clear('VcKeySel')
 
         vhl.Extend('VcKeyNoSel', 'VcKey')
-        vhl.Extend('VcKeySel', 'VcSel', 'underline')
+        vhl.Extend('VcKeySel', 'VcSel', 'bold')
     enddef
 
     def Render(): void
@@ -165,9 +165,9 @@ class Menu extends VBox
                 var row = str2nr(k) + 1
                 var c: string
                 if r[3] == this._curIndex
-                    c = r[2] == 'Key' ? 'VcKeySel' : 'VcSel'
+                    c = r[2] == 'VcFcKey' ? 'VcKeySel' : 'VcSel'
                 else
-                    c = r[2] == 'Key' ? 'VcKeyNoSel' : 'VcNormal'
+                    c = r[2] == 'VcFcKey' ? 'VcKeyNoSel' : 'VcNormal'
                 endif
                 cmds->add(vhl.RegionCmd(c, row, r[0] + 1, row, r[1] + 1))
             endfor

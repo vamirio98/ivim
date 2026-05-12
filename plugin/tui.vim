@@ -7,6 +7,6 @@ g:vcTuiBorderChars = get(g:, 'vcTuiBorderChars', ['─', '│', '─', '│', '�
 
 hi! link VcNormal Pmenu
 hi! link VcSel PmenuSel
-vhl.Extend('VcKey', 'VcNormal', 'underline')
+vhl.Extend('VcKey', 'Title', 'bold')
 vhl.Extend('VcDisable', 'Comment', {'italic': false})
 vhl.Extend('VcHelp', 'String')

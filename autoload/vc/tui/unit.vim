@@ -16,7 +16,7 @@ type Align = mw.Align
 # one-line widget
 export class Unit extends BaseWidget
     # NOTE: colors: [ rowOff, [ [colOff1, colOff2, highlight] ] ]
-    # NOTE: 'Key' is the fake color for the key, and 'NotKey' is the fake color
+    # NOTE: 'VcFcKey' is the fake color for the key, and 'VcFcNotKey' is the fake color
     # for others
     var isSep: bool = false
     var key: string = null_string
@@ -109,9 +109,9 @@ export class Unit extends BaseWidget
             if this.key != null && i == this._keyPosDesc.seq
                 var keyOff = text->strdisplaywidth() + this._keyPosDesc.pos
                 if keyOff != 0
-                    this.colors[0]->add([0, keyOff, 'NotKey'])
+                    this.colors[0]->add([0, keyOff, 'VcFcNotKey'])
                 endif
-                this.colors[0]->add([keyOff, keyOff + 1, 'Key'])
+                this.colors[0]->add([keyOff, keyOff + 1, 'VcFcKey'])
                 colorStart = keyOff + 1
             endif
             text ..= type(Entry) == v:t_string ? Entry : Entry()
@@ -121,7 +121,7 @@ export class Unit extends BaseWidget
         this.dispWidth = text->strdisplaywidth()
         this.dispHeight = 1
         if !this.colors->empty()
-            this.colors[0]->add([colorStart, this.dispWidth, 'NotKey'])
+            this.colors[0]->add([colorStart, this.dispWidth, 'VcFcNotKey'])
         endif
 
         this.SetDirty()
@@ -421,7 +421,7 @@ if 0
                 endif
 
                 for c in colors[0]
-                    if c[2] == 'Key'
+                    if c[2] == 'VcFcKey'
                         return c[0] == ko && c[1] == ko + 1
                     endif
                 endfor
