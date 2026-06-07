@@ -12,68 +12,37 @@ export def ExtactBorderchars(border: string): list<string>
 enddef
 
 
-export def Exec(winid: number, command: any, silent: string = null_string): void
+export def Exec(winid: number, command: any, silent: string = null_string): string
     var cmd: string = null_string
     if type(command) == v:t_string
         cmd = command
     elseif type(command) == v:t_list
         cmd = command->join("\n")
     endif
-    keepalt win_execute(winid, cmd, silent)
+    return win_execute(winid, cmd, silent)
+    # keepalt win_execute(winid, cmd, silent)
 enddef
 
 
-# Options. {{{ #
-#---------------------------------------------------------------
-# Calculate window size according to {what} and {opts}
-# Return { 'minwidth', 'maxwidth', 'minheight', 'maxheight' }
-#---------------------------------------------------------------
-export def CalSize(what: any = null, opts: dict<any> = null_dict): dict<any>
-    var minWidth: number = opts->get('minwidth', 20)
-    var minHeight: number = opts->get('minheight', 1)
-    minWidth = max([minWidth, 4])
-    minHeight = max([minHeight, 1])
-
-    var maxWidth: number = (&columns * 0.8)->float2nr()
-    var maxHeight: number = (&lines * 0.7)->float2nr()
-    maxWidth = opts->get('maxwidth', maxWidth)
-    maxHeight = opts->get('maxheight', maxHeight)
-
-    var w: number = opts->get('w', 0)
-    var h: number = opts->get('h', 0)
-    # Auto calculate the width and height from `what`
-    if (w == 0 || h == 0) && what != null
-        var lines: list<string>
-        if what->type() == v:t_list
-            lines = what
-        elseif what->type() == v:t_string
-            lines = what->split("\n")
-        else
-            lines = what->getbufline(1, '$')
-        endif
-
-        if w == 0
-            for line in lines
-                w = max([w, line->strdisplaywidth()])
-            endfor
-        endif
-        if h == 0
-            h = lines->len()
-        endif
-    endif
-
-    w = max([min([w, maxWidth]), minWidth])
-    h = max([min([h, maxHeight]), minHeight])
-    # Use dict<any> because other popup arguments may be any type
-    var res: dict<any> = {
-        'minwidth': w,
-        'maxwidth': w,
-        'minheight': h,
-        'maxheight': h,
-    }
-    return res
+# NOTE: column of buffer's cursor position in characters index, no byte index
+export def SetCursor(winid: number, row: number = 1, col: number = 1): void
+    Exec(winid, $'setcursorcharpos({row}, {col})')
 enddef
-# }}} Options. #
+
+
+# NOTE: column of buffer's cursor position in characters index, no byte index
+export def GetCursor(winid: number): list<number>
+    var cr = getcursorcharpos(winid)
+    return [cr[1], cr[2]]
+enddef
+
+
+# NOTE: column of window's cursor position in characters index, no byte index
+export def GetScreenPos(winid: number): list<number>
+    var cur = getcurpos(winid)
+    var pos = screenpos(winid, cur[1], cur[2])
+    return [pos.row, pos.curscol]
+enddef
 
 
 # Move and search. {{{ #
@@ -83,7 +52,7 @@ enddef
 export def UpdateCursor(winid: number): void
     const margin: number = &scrolloff
     var winHeight: number = winheight(winid)
-    var winLine: number = ScreenLine(winid)
+    var winLine: number = ScreenLineInWindow(winid)
     var line: number = line('.', winid)
     var lastLine: number = line('$', winid)
     var dBottom = winHeight - winLine
@@ -179,8 +148,9 @@ enddef
 
 
 # Misc. {{{ #
-# Get the cursor position relative to the top row of the screen, one-based.
-export def ScreenLine(winid: number): number
+# Get the cursor position relative to the top row of the screen in
+# specified window, one-based.
+export def ScreenLineInWindow(winid: number): number
     # Also see :h getwininfo() for more infomation.
     var top: number = line('w0', winid)
     var cur: number = line('.', winid)

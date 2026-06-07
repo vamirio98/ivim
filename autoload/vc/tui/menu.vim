@@ -1,11 +1,14 @@
 vim9script
 
+# TODO: show help in popup
+
 import autoload './core.vim'
 import autoload './unit.vim'
 import autoload './window.vim'
 import autoload './highlight.vim' as vhl
 import autoload './widget.vim' as mw
 import autoload './layout.vim' as ml
+import autoload './popup.vim' as mp
 
 type Unit = unit.Unit
 type Widget = mw.Widget
@@ -14,6 +17,14 @@ type VBox = ml.VBox
 
 const kDefZindex: number = 1000  # default priority of the menu
 const kDeltaZindex: number = 5
+const kActionCloseAll = -1
+const kActionCloseSelf = -2
+
+# member index of _cbs
+const kCbCallback = 0
+const kCbRow = 1
+const kCbIsSection = 2
+const kCbWinid = 3
 
 class Menu extends VBox
     var winid: number = -1
@@ -25,7 +36,8 @@ class Menu extends VBox
     var _size: number = 0
     var _curIndex: number = 0  # -1 means no select
     var _keymap: dict<string> = null_dict
-    var _cbs: dict<func> = {}
+    # callback, row, isSection, winid (kCbXXX)
+    var _cbs: dict<tuple<func, number, bool, number>> = {}
 
     # {a_section}: like Unit.new.what, can be following type:
     #   string
@@ -49,13 +61,16 @@ class Menu extends VBox
         else
             throw $'unsupported type: {st}'
         endif
-        secDesc.cb = this.Open
+        secDesc.cb = this.OpenAsSubMenu
         this.section = Unit.new(secDesc)
+        this.section.SetIsSection(true)
         this._keymap = core.Keymap(true)
 
         var index = 0
+        var row = 0
         var maxWidth = 0
         for item in a_items
+            row += 1
             var tmp: Unit = null_object
 
             var t = item->type()
@@ -65,6 +80,7 @@ class Menu extends VBox
                 tmp = item
             elseif item->instanceof(Menu)
                 tmp = item.section
+                item.SetParent(this)
             endif
             maxWidth = max([maxWidth, tmp.dispWidth])
             this.AddWidget(tmp)
@@ -74,7 +90,8 @@ class Menu extends VBox
             endif
 
             tmp.SetId(index)
-            this._cbs[index] = tmp.Exec
+            this._cbs[index] = (tmp.Exec, row, tmp.isSection,
+                tmp.isSection ? item.winid : -1)
             if tmp.key != null
                 this._keymap[tolower(tmp.key)] = $'ACCEPT:{index}'
             endif
@@ -109,24 +126,48 @@ class Menu extends VBox
             cursorline: 0,
             hidden: 1,
         }
-        opts = opts->extend(window.CalSize(this.image, {
+        opts = opts->extend(mp.CalSize(this.image, {
             minwidth: 4,
         }))
         this.winid = popup_create(this.image, opts)
     enddef
 
+
     def _Filter(winid: number, a_key: string): bool
         const keymap = this._keymap
         if a_key == "\<esc>" || a_key == "\<C-c>"
-            popup_close(winid, -1)
+            popup_close(winid, kActionCloseAll)
             return 1
         else
             var key = keymap->get(a_key, a_key)
-            if key == 'ENTER'
-                popup_close(winid, this._curIndex)
+            if key == 'ENTER' || key == 'RIGHT'
+                var cb = this._cbs[this._curIndex]
+                if cb[kCbIsSection]
+                    var F = cb[kCbCallback]
+                    F()
+                else
+                    popup_close(winid, this._curIndex)
+                endif
+                return 1
+            elseif key == 'LEFT' || key == "\<bs>"
+                if this.parent == null  # do not hide the top menu
+                    return 1
+                endif
+                this._curIndex = 0
+                popup_hide(winid)
                 return 1
             elseif key =~ '^ACCEPT:'
-                popup_close(winid, str2nr(key[7 :]))
+                var index = str2nr(key[7 :])
+                this._curIndex = index
+                var cb = this._cbs[index]
+                window.SetCursor(winid, cb[kCbRow], 1)
+                if cb[kCbIsSection]
+                    var F = cb[kCbCallback]
+                    F()
+                    this.Render()
+                else
+                    popup_close(winid, this._curIndex)
+                endif
                 return 1
             else
                 if key == 'DOWN'
@@ -135,6 +176,8 @@ class Menu extends VBox
                     this._curIndex -= 1
                 endif
                 this._curIndex = max([0, min([this._size - 1, this._curIndex])])
+                var row = this._cbs[this._curIndex][kCbRow]
+                window.SetCursor(winid, row, 1)
                 this.Render()
                 redraw
                 return 1
@@ -143,11 +186,27 @@ class Menu extends VBox
     enddef
 
     def _Callback(winid: number, index: number): void
-        if index < 0
+        if index >= 0
+            var F = this._cbs[index][kCbCallback]
+            F()
+        endif
+
+        if index == kActionCloseAll || index >= 0
+            if this.parent != null
+                var parent = <Menu>this.parent
+                popup_close(parent.winid, kActionCloseAll)
+                this.parent = null_object
+            endif
+            # clear all sub-menu, avoid popup buffer leak
+            for cb in this._cbs->values()
+                if cb[kCbIsSection]
+                    popup_close(cb[kCbWinid], kActionCloseSelf)
+                endif
+            endfor
+            return
+        elseif index == kActionCloseSelf
             return
         endif
-        var F = this._cbs[index]
-        F()
     enddef
 
     def _PrepareHl(): void
@@ -177,6 +236,24 @@ class Menu extends VBox
         window.Exec(this.winid, cmds)
     enddef
 
+
+    def OpenAsSubMenu(): void
+        if this.parent == null || !this.parent->instanceof(Menu)
+            return
+        endif
+        var parent = <Menu>this.parent
+        var pwinid = parent.winid
+        var pPos = mp.GetPos(pwinid)
+        var cur = window.GetCursor(pwinid)
+        var pos = mp.GetPos(this.winid)
+        this.Open()
+        popup_setoptions(this.winid, { zindex: parent.winid + kDeltaZindex })
+        this.winid->mp.Move(
+            (pPos.coreRow + (cur[0] - 1)) - (pos.coreRow - pos.row),
+            pPos.col + pPos.width)
+    enddef
+
+
     def Open(): void
         this.visable = true
         this.Render()
@@ -190,13 +267,21 @@ class Menu extends VBox
     enddef
 endclass
 
-def Open(a_entries: list<any>, a_opts: dict<any> = {}): void
+export def Open(a_entries: list<any>, a_opts: dict<any> = {}): void
     var menu = Menu.new('', a_entries, a_opts)
     menu.Open()
 enddef
 
+export def OpenAtCursor(a_entries: list<any>, a_opts: dict<any> = {}): void
+    var menu = Menu.new('', a_entries, a_opts)
+    var pos = window.GetScreenPos(win_getid())
+    # column + 1 to avoid cursor
+    mp.Move(menu.winid, pos[0], pos[1] + 1)
+    menu.Open()
+enddef
+
 # Test suit {{{ #
-if 1
+if 0
     def Test(): void
         var item = Unit.new({
             what: '&Green',
@@ -205,7 +290,7 @@ if 1
             },
             help: 'This is green'
         })
-        var menu = Menu.new('sub-menu', [
+        var menu = Menu.new('&sub-menu', [
             ['&Hello', 'echo "hello"', 'Tip 1'],
             '--',
             ['&World', () => {
@@ -213,13 +298,16 @@ if 1
             }, 'Tip 2'],
         ])
 
-        Open([
+        var entries = [
             ['&Red', 'echo "red"', 'This is red'],
             item,
             '-',
             {what: '&Blue', cb: 'echo "blue"', help: 'This is blue'},
             menu,
-        ])
+        ]
+
+        # Open(entries)
+        OpenAtCursor(entries)
     enddef
 
     Test()

@@ -18,6 +18,7 @@ export class Unit extends BaseWidget
     # NOTE: colors: [ rowOff, [ [colOff1, colOff2, highlight] ] ]
     # NOTE: 'VcFcKey' is the fake color for the key, and 'VcFcNotKey' is the fake color
     # for others
+    var isSection: bool = false
     var isSep: bool = false
     var key: string = null_string
 
@@ -87,6 +88,11 @@ export class Unit extends BaseWidget
         this.help = desc->get('help', null_string)
         this.Update()
         this.Render()
+    enddef
+
+
+    def SetIsSection(isSection: bool): void
+        this.isSection = isSection
     enddef
 
 

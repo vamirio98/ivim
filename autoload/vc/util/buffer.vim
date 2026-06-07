@@ -2,13 +2,10 @@ vim9script
 
 import autoload './path.vim'
 import autoload './os.vim'
+import autoload './string.vim' as str
 import autoload './notify.vim'
 
-# for anonymous buffers
-var anon: list<number> = []
 
-
-# for named buffers
 class NamedBufMgr
     var _dict: dict<number> = {}
     var _list: list<number> = []
@@ -22,19 +19,16 @@ class NamedBufMgr
         elseif type(buf) == v:t_string
             return this._dict->has_key(buf)
         else
-            throw $'{buf} should be number or string'
+            return false
         endif
     enddef
 
-    def Bufnr(name: string): number
-        if !this._dict->has_key(name)
-            throw $'{name} is not managed'
-        endif
+    def GetBufnr(name: string): number
         return this._dict[name]
     enddef
 
     def Add(buf: number, name: string): number
-        if this._dict->has_key(name) || this._list->index(buf) >= 0
+        if this._list->index(buf) >= 0 || this._dict->has_key(name)
             throw $'[{buf}]({name}) is already exists'
         endif
         this._dict[name] = buf
@@ -43,24 +37,24 @@ class NamedBufMgr
     enddef
 
     def Del(buf: any): number
-        if !this.Exists(buf)
-            throw $'{buf} is not managed'
-        endif
-        if type(buf) == v:t_string
+        var t = buf->type()
+        if t == v:t_string && this._dict->has_key(buf)
             var bnr: number = this._dict[buf]
             this._dict->remove(buf)
             return this._list->remove(this._list->index(bnr))
+        elseif t == v:t_number && this._list->index(buf) >= 0
+            var key: string
+            for [k, v] in this._dict->items()
+                if v == buf
+                    key = k
+                    break
+                endif
+            endfor
+            this._dict->remove(key)
+            return this._list->remove(this._list->index(buf))
+        else
+            return -1
         endif
-
-        var key: string
-        for [k, v] in this._dict->items()
-            if v == buf
-                key = k
-                break
-            endif
-        endfor
-        this._dict->remove(key)
-        return this._list->remove(this._list->index(buf))
     enddef
 
     def Clear(): list<number>
@@ -71,35 +65,45 @@ class NamedBufMgr
     enddef
 endclass
 
-var named: NamedBufMgr = NamedBufMgr.new()
 
-var objects: dict<any> = {}
+# for anonymous buffers
+var s_anon: list<number> = []
+# for named buffers
+var s_named: NamedBufMgr = NamedBufMgr.new()
+# for objects
+var s_objs: dict<any> = {}
+
 const kNameKey: string = '__name__'
 const kPathKey: string = '__path__'
 
 
-def Bufnr(buf: any): number
-    return type(buf) == v:t_number ? buf : named.Bufnr(buf)
+export def GetBufnr(buf: any): number
+    if type(buf) == v:t_number
+        return buf
+    else
+        var bufnr = s_named.GetBufnr(buf)
+        return bufnr >= 0 ? bufnr : bufnr(buf)
+    endif
 enddef
 
 
-export def GetObject(buf: any): dict<any>
-    var bnr: number = Bufnr(buf)
-    if !objects->has_key(buf)
-        objects[bnr] = {}
+export def GetObj(buf: any): dict<any>
+    var bnr: number = GetBufnr(buf)
+    if !s_objs->has_key(buf)
+        s_objs[bnr] = {}
     endif
-    return objects[bnr]
+    return s_objs[bnr]
 enddef
 
 
 export def GetName(buf: any): string
-    var obj = GetObject(buf)
+    var obj = GetObj(buf)
     return get(obj, kNameKey, null_string)
 enddef
 
 
 export def GetPath(buf: any): string
-    var obj = GetObject(buf)
+    var obj = GetObj(buf)
     return get(obj, kPathKey, null_string)
 enddef
 
@@ -108,7 +112,7 @@ enddef
 # setbufvar
 #---------------------------------------------------------------
 export def SetVar(buf: any, varname: string, value: any): void
-    var obj = GetObject(buf)
+    var obj = GetObj(buf)
     obj[varname] = value
 enddef
 
@@ -117,7 +121,7 @@ enddef
 # getbufvar
 #---------------------------------------------------------------
 export def GetVar(buf: any, varname: string, default: any = null): any
-    var obj = GetObject(buf)
+    var obj = GetObj(buf)
     return get(obj, varname, default)
 enddef
 
@@ -126,7 +130,7 @@ enddef
 # autocmd
 #---------------------------------------------------------------
 export def Autocmd(buf: any, event: string, funcname: string): void
-    var bnr: number = Bufnr(buf)
+    var bnr: number = GetBufnr(buf)
     exec $'au {event} <buffer={bnr}> {funcname}'
 enddef
 
@@ -135,7 +139,7 @@ enddef
 # remove all autocmd
 #---------------------------------------------------------------
 export def NoAutocmd(buf: any, event: string): void
-    var bnr: number = Bufnr(buf)
+    var bnr: number = GetBufnr(buf)
     exec $'au! {event} <buffer={bnr}>'
 enddef
 
@@ -144,7 +148,7 @@ enddef
 # sync buffer to disk
 #---------------------------------------------------------------
 export def Sync(buf: any): void
-    var bnr: number = Bufnr(buf)
+    var bnr: number = GetBufnr(buf)
     var curBnr: number = bufnr('%')
     silent exec 'buffer' bnr
     silent exec 'update'
@@ -152,23 +156,12 @@ export def Sync(buf: any): void
 enddef
 
 
-def ToList(lines: any): list<string>
-    if type(lines) == v:t_list
-        return lines
-    elseif type(lines) == v:t_string
-        return split(lines, '\n', 1)
-    else
-        return split(string(lines), '\n', 1)
-    endif
-enddef
-
-
 #---------------------------------------------------------------
 # update buffer content
 #---------------------------------------------------------------
 export def Update(buf: any, lines: any): number
-    var bnr: number = Bufnr(buf)
-    var text: list<string> = ToList(lines)
+    var bnr: number = GetBufnr(buf)
+    var text: list<string> = str.List(lines)
     var modifiable: bool = getbufvar(bnr, '&modifiable', 0)
     var res: number = (!deletebufline(bnr, 1, '$') &&
         !setbufline(bnr, 1, text)) ? 0 : 1
@@ -188,9 +181,9 @@ enddef
 #---------------------------------------------------------------
 # append text to buffer
 #---------------------------------------------------------------
-export def AppendLine(buf: any, lnum: any, lines: any): number
-    var bnr: number = Bufnr(buf)
-    var text: list<string> = ToList(lines)
+export def AddLine(buf: any, lnum: any, lines: any): number
+    var bnr: number = GetBufnr(buf)
+    var text: list<string> = str.List(lines)
     var modifiable: bool = getbufvar(bnr, '&modifiable', 0)
     setbufvar(bnr, '&modifiable', 1)
     var res: number = appendbufline(bnr, lnum, text)
@@ -202,8 +195,8 @@ enddef
 #---------------------------------------------------------------
 # delete line [first, last]
 #---------------------------------------------------------------
-export def DeleteLine(buf: any, first: any, last: any = null): number
-    var bnr: number = Bufnr(buf)
+export def DelLine(buf: any, first: any, last: any = null): number
+    var bnr: number = GetBufnr(buf)
     var modifiable: bool = getbufvar(bnr, '&modifiable', 0)
     setbufvar(bnr, '&modifiable', 1)
     var res: number = deletebufline(bnr, first, last)
@@ -216,8 +209,8 @@ enddef
 # setbufline
 #---------------------------------------------------------------
 export def SetLine(buf: any, lnum: any, lines: any): number
-    var bnr: number = Bufnr(buf)
-    var text: list<string> = ToList(lines)
+    var bnr: number = GetBufnr(buf)
+    var text: list<string> = str.List(lines)
     var modifiable: bool = getbufvar(bnr, '&modifiable', 0)
     setbufvar(bnr, '&modifiable', 1)
     var res: number = setbufline(bnr, lnum, text)
@@ -230,7 +223,7 @@ enddef
 # getbufline [first, last]
 #---------------------------------------------------------------
 export def GetLine(buf: any, first: any, last: any = null): list<string>
-    var bnr: number = Bufnr(buf)
+    var bnr: number = GetBufnr(buf)
     return getbufline(bnr, first, last)
 enddef
 
@@ -250,8 +243,8 @@ export def Alloc(hasName: bool = false, name: string = null_string): number
     var fname: string = name
 
     if !hasName
-        if !anon->empty()
-            bnr = anon->remove(-1)
+        if !s_anon->empty()
+            bnr = s_anon->remove(-1)
         else
             silent bnr = bufadd('')
         endif
@@ -262,11 +255,11 @@ export def Alloc(hasName: bool = false, name: string = null_string): number
             fpath = os.TmpFile()
             fname = path.Basename(fpath)
         endif
-        if named.Exists(fname)
+        if s_named.Exists(fname)
             throw $'{name} is already exists'
         endif
         silent bnr = bufadd(fpath)
-        named.Add(bnr, fname)
+        s_named.Add(bnr, fname)
     endif
 
     silent bufload(bnr)
@@ -290,26 +283,26 @@ enddef
 # free a buffer
 #---------------------------------------------------------------
 export def Free(buf: any): void
-    var bnr: number = Bufnr(buf)
+    var bnr: number = GetBufnr(buf)
+    NoAutocmd(bnr, '*')
     var fpath: string = null_string
-    if named.Exists(bnr)  # a named buffer
+    if s_named.Exists(bnr)  # a named buffer
         fpath = GetVar(bnr, kPathKey)
-        named.Del(bnr)
+        s_named.Del(bnr)
         silent exec $'bwipeout! {bnr}'
         delete(fpath)
     else  # a anonymous buffer
         Clear(bnr)
-        anon->add(bnr)
+        s_anon->add(bnr)
     endif
-    objects->remove(bnr)
-    NoAutocmd(bnr, '*')
+    s_objs->remove(bnr)
 enddef
 
 
 # clear all buffers when leave vim
 def ClearOnExit(): void
     var err: bool = false
-    var buffers: list<number> = named.Clear()
+    var buffers: list<number> = s_named.Clear()
     for bnr in buffers
         var fpath: string = GetVar(bnr, kPathKey, '')
         if fpath->empty() || delete(fpath) != 0

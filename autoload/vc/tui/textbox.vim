@@ -3,6 +3,7 @@ vim9script
 import autoload './core.vim'
 import autoload './util.vim'
 import autoload './window.vim'
+import autoload './popup.vim' as mp
 
 
 def Filter(winid: number, key: string): bool
@@ -54,7 +55,7 @@ enddef
 def InitPopupOpts(what: any, options: dict<any>): dict<any>
     var opts: dict<any> = options == null ? options->deepcopy() : {}
 
-    opts->extend(window.CalSize(what, opts))
+    opts->extend(mp.CalSize(what, opts))
     opts->extend({
         border: [ 1, 1, 1, 1 ],
         borderchars: g:vcTuiBorderChars,

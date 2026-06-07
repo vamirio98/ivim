@@ -8,6 +8,7 @@ import autoload '../util/interact.vim'
 import autoload '../util/string.vim' as str
 import autoload './widget.vim' as mw
 import autoload './layout.vim' as ml
+import autoload './popup.vim' as mp
 
 
 type Unit = unit.Unit
@@ -93,7 +94,7 @@ class Dialog extends VBox
     def _InitPopupOpts(what: list<string>, opts: dict<any>): dict<any>
         var popupOpts: dict<any> = opts->deepcopy()
 
-        popupOpts->extend(window.CalSize(what, {
+        popupOpts->extend(mp.CalSize(what, {
             minwidth: this.width,
             maxwidth: &columns * 80 / 100,
         }))
