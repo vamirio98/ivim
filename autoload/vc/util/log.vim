@@ -28,15 +28,26 @@ def Init(): void
     # Clean up log older than `g:vc_log_keep_time`
     var curTime: number = localtime()
     var interval: number = g:vc_log_keep_time * 24 * 60 * 60
+    var needDel: list<string> = []
     for f in glob(path.Abspath(g:vc_log_dir) .. path.sep .. '*', true, true)
         if curTime - getftime(f) >= interval
+            needDel->add(f)
+        endif
+    endfor
+
+    var DelOldLog: func = (_) => {
+        for f in needDel
             if delete(f) != 0
                 notify.Error($'can not remove {f}')
             else
                 notify.Warn($'remove {f}')
             endif
-        endif
-    endfor
+        endfor
+    }
+    if timer_start(5000, DelOldLog) < 0
+        notify.Error('failed to use timer to delete old log')
+        DelOldLog()
+    endif
 enddef
 
 Init()
