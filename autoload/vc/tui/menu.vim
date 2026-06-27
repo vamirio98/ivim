@@ -9,6 +9,7 @@ import autoload './highlight.vim' as vhl
 import autoload './widget.vim' as mw
 import autoload './layout.vim' as ml
 import autoload './popup.vim' as mp
+import autoload 'vc/util/notify.vim'
 
 type Unit = unit.Unit
 type Widget = mw.Widget
@@ -176,7 +177,14 @@ class Menu extends VBox
                     this._curIndex -= 1
                 endif
                 this._curIndex = max([0, min([this._size - 1, this._curIndex])])
-                var row = this._cbs[this._curIndex][kCbRow]
+                var cbs = this._cbs[this._curIndex]
+                var row = cbs[kCbRow]
+                var item = <Unit>this.widgets[row - 1]
+                if item.help != null
+                    notify.Info(item.help)
+                else
+                    notify.Clear()
+                endif
                 window.SetCursor(winid, row, 1)
                 this.Render()
                 redraw

@@ -22,8 +22,7 @@ export class Unit extends BaseWidget
     var isSep: bool = false
     var key: string = null_string
 
-    public var help: string = null_string
-    public var enable: bool = true
+    var help: string = null_string
 
     var _parts: list<any> = null_list  # all parts of text (string or func)
     var _keyPosDesc: KeyPosDesc = null_object
@@ -93,6 +92,11 @@ export class Unit extends BaseWidget
 
     def SetIsSection(isSection: bool): void
         this.isSection = isSection
+    enddef
+
+
+    def SetHelp(help: string): void
+        this.help = help
     enddef
 
 

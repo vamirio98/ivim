@@ -29,6 +29,11 @@ export def Info(what: any, keep: bool = false)
     Notify(what, 'Identifier', keep)
 enddef
 
+
+export def Clear(): void
+    echo ''
+enddef
+
 augroup VcAutoloadUtilNotify
     au!
     au VimEnter * for Msg in msgQueue | Msg() | endfor | msgQueue = []
