@@ -14,9 +14,6 @@ type Align = mw.Align
 type HBox = ml.HBox
 type Menu = mm.Menu
 
-var s_menuBar: dict<list<Menu>> = null_dict
-var s_current: string = 'main'
-
 const kDefZindex = 1000
 const kDeltaZindex = 10
 const kActionCloseAll = -1
@@ -45,6 +42,9 @@ class MenuBar extends HBox implements VisibleWidget
             tmp.SetWidth(tmp.dispWidth + 4)
 
             this.AddWidget(tmp)
+            if tmp.key != null
+                this._keymap[tolower(tmp.key)] = $'ACCEPT:{index}'
+            endif
             this._cbs->add((item, colOff))
             item.SetParent(this)
 
@@ -109,11 +109,11 @@ class MenuBar extends HBox implements VisibleWidget
             elseif key =~ '^ACCEPT:'
                 var index = str2nr(key[7 :])
                 this._curIndex = index
+                this.Render()
                 this.OpenSubMenu(this._curIndex)
             endif
             return 1
         endif
-
     enddef
 
     def _PrepareHl(): void
@@ -162,8 +162,19 @@ class MenuBar extends HBox implements VisibleWidget
     enddef
 endclass
 
+
+var s_menuBar: dict<MenuBar> = null_dict
+var s_current: string = 'main'
+
 def Register(a_entrys: list<Menu>, name: string = 'main'): void
-    s_menuBar[name] = a_entrys
+    s_menuBar[name] = MenuBar.new(a_entrys)
+enddef
+
+def Unregister(name: string): void
+    if !s_menuBar->has_key(name)
+        throw $'no "{name}" registered'
+    endif
+    s_menuBar->remove(name)
 enddef
 
 def Switch(name: string): void
@@ -173,7 +184,12 @@ def Switch(name: string): void
     s_current = name
 enddef
 
-def Open(name: string = null_string): void
+def Open(a_name: string = null_string): void
+    var name: string = a_name == null ? s_current : a_name
+    if !s_menuBar->has_key(name)
+        throw $'no "{name}" registered'
+    endif
+    s_menuBar[name].Open()
 enddef
 
 # test suit {{{ #
@@ -190,8 +206,8 @@ if 0
             ['&Red', 'echo "red"', 'This is red'],
         ])
 
-        var menuBar = MenuBar.new([m1, m2])
-        menuBar.Open()
+        Register([m1, m2])
+        Open()
     enddef
 
     Test()
