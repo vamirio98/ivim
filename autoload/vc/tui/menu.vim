@@ -13,6 +13,7 @@ import autoload 'vc/util/notify.vim'
 
 type Unit = unit.Unit
 type Widget = mw.Widget
+type VisibleWidget = mw.VisibleWidget
 type Align = mw.Align
 type VBox = ml.VBox
 
@@ -27,11 +28,11 @@ const kCbRow = 1
 const kCbIsSection = 2
 const kCbWinid = 3
 
-class Menu extends VBox
+export class Menu extends VBox implements VisibleWidget
     var winid: number = -1
     var section: Unit = null_object
     var zindex: number = kDefZindex
-    var visable: bool = false
+    var visible: bool = false
     var active: bool = true
 
     var _size: number = 0
@@ -201,7 +202,7 @@ class Menu extends VBox
 
         if index == kActionCloseAll || index >= 0
             if this.parent != null
-                var parent = <Menu>this.parent
+                var parent = <VisibleWidget>this.parent
                 popup_close(parent.winid, kActionCloseAll)
                 this.parent = null_object
             endif
@@ -228,7 +229,6 @@ class Menu extends VBox
     def Render(): void
         super.Render()
         var cmds: list<string> = [ vhl.ClearCmd() ]
-        var prevIndex = 0
         for [k, v] in this.colors->items()
             for r in v
                 var row = str2nr(k) + 1
@@ -263,14 +263,14 @@ class Menu extends VBox
 
 
     def Open(): void
-        this.visable = true
+        this.visible = true
         this.Render()
         popup_setoptions(this.winid, { zindex: this.zindex })
         popup_show(this.winid)
     enddef
 
     def Close(): void
-        this.visable = false
+        this.visible = false
         popup_hide(this.winid)
     enddef
 endclass

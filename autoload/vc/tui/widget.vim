@@ -58,6 +58,11 @@ export interface Widget extends PureWidget
 endinterface
 
 
+export interface VisibleWidget extends Widget
+    var winid: number
+endinterface
+
+
 export class BaseWidget implements Widget
     var image: list<string> = []
     var dispWidth: number = 0
