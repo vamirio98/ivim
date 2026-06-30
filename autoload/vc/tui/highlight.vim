@@ -154,6 +154,22 @@ export def RegionCmd(color: string, row1: number, col1: number,
 enddef
 
 
+var s_guiCursor: list<dict<any>>
+
+export def CursorHide(): void
+    set t_ve=
+    s_guiCursor = hlget("Cursor")
+    hlset([{ name: 'Cursor', cleared: 1 }])
+enddef
+
+export def CursorShow(): void
+    set t_ve&
+    if hlget("Cursor")[0]->get('cleared', 0)
+        hlset(s_guiCursor)
+    endif
+enddef
+
+
 if 0
     def Test(): void
         hi CurSearch

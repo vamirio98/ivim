@@ -4,6 +4,7 @@ import autoload './core.vim'
 import autoload './util.vim'
 import autoload './window.vim'
 import autoload './popup.vim' as mp
+import autoload './highlight.vim' as vhl
 
 
 def Filter(winid: number, key: string): bool
@@ -13,7 +14,9 @@ def Filter(winid: number, key: string): bool
     endif
 
     const keymap = obj.keymap
-    if key == "\<esc>" || key == "\<cr>" || key == "\<C-c>" ||
+    if key == "\<CursorHold>"
+        return 1
+    elseif key == "\<esc>" || key == "\<cr>" || key == "\<C-c>" ||
             key == " " || key == "x" || key == "q"
         popup_close(winid, line('.', winid))
         return true
@@ -39,12 +42,13 @@ def Filter(winid: number, key: string): bool
             return true
         endif
     endif
-    return false
+    return 1
 enddef
 
 
 # {args} is the line number when close popup window
 def Callback(winid: number, lnum: number): void
+    vhl.CursorShow()
     var obj = core.ObjAcquire(winid)
     if obj->has_key('callback')
         obj.callback(winid, lnum)
@@ -67,6 +71,7 @@ def InitPopupOpts(what: any, options: dict<any>): dict<any>
         filter: Filter,
         callback: Callback,
         mapping: false,
+        zindex: 1000,
     })
 
     opts['title'] = $' {get(opts, 'title', "Textbox")} '
@@ -89,6 +94,7 @@ enddef
 export def Open(what: any, opts: dict<any> = null_dict): number
     var popupOpts: dict<any> = InitPopupOpts(what, opts)
     var winid: number = popup_create(what, popupOpts)
+    vhl.CursorHide()
     if opts->has_key('callback')
         var obj = core.ObjAcquire(winid)
         obj.callback = opts.callback

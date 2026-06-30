@@ -88,6 +88,7 @@ class Dialog extends VBox
 
     def _Callback(winid: number, result: any): void
         this._quit = true
+        vhl.CursorShow()
     enddef
 
 
@@ -198,6 +199,7 @@ endclass
 export def Open(question: string, choices: string = "&Yes\n&No\n&Cancel",
         default: number = 1, title: string = 'Confirm'): number
     var win: Dialog = Dialog.new(question, choices, default, title)
+    vhl.CursorHide()
     return win.Exec()
 enddef
 

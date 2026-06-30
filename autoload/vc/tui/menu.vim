@@ -137,7 +137,9 @@ export class Menu extends VBox implements VisibleWidget
 
     def _Filter(winid: number, a_key: string): bool
         const keymap = this._keymap
-        if a_key == "\<esc>" || a_key == "\<C-c>"
+        if a_key == "\<CursorHold>"
+            return 1
+        elseif a_key == "\<esc>" || a_key == "\<C-c>"
             popup_close(winid, kActionCloseAll)
             return 1
         else
@@ -195,6 +197,7 @@ export class Menu extends VBox implements VisibleWidget
     enddef
 
     def _Callback(winid: number, index: number): void
+        vhl.CursorShow()
         if index >= 0
             var F = this._cbs[index][kCbCallback]
             F()
@@ -245,6 +248,11 @@ export class Menu extends VBox implements VisibleWidget
     enddef
 
 
+    def SetZindex(zindex: number): void
+        this.zindex = zindex
+    enddef
+
+
     def OpenAsSubMenu(): void
         if this.parent == null || !this.parent->instanceof(Menu)
             return
@@ -255,7 +263,8 @@ export class Menu extends VBox implements VisibleWidget
         var cur = window.GetCursor(pwinid)
         var pos = mp.GetPos(this.winid)
         this.Open()
-        popup_setoptions(this.winid, { zindex: parent.winid + kDeltaZindex })
+        this.SetZindex(parent.zindex + kDeltaZindex)
+        popup_setoptions(this.winid, { zindex: this.zindex })
         this.winid->mp.Move(
             (pPos.coreRow + (cur[0] - 1)) - (pos.coreRow - pos.row),
             pPos.col + pPos.width)
@@ -267,11 +276,13 @@ export class Menu extends VBox implements VisibleWidget
         this.Render()
         popup_setoptions(this.winid, { zindex: this.zindex })
         popup_show(this.winid)
+        vhl.CursorHide()
     enddef
 
     def Close(): void
         this.visible = false
         popup_hide(this.winid)
+        vhl.CursorShow()
     enddef
 endclass
 

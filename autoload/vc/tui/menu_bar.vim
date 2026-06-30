@@ -81,8 +81,9 @@ class MenuBar extends HBox implements VisibleWidget
         var cb = this._cbs[id]
         var zindex = this.zindex + kDeltaZindex
         var menu = <Menu>cb[kCbMenu]
-        menu.Open()
+        menu.SetZindex(zindex)
         popup_setoptions(menu.winid, { zindex: zindex })
+        menu.Open()
         mp.Move(menu.winid, 2, cb[kCbColOff] + 1)
     enddef
 
@@ -93,24 +94,30 @@ class MenuBar extends HBox implements VisibleWidget
 
     def _Filter(winid: number, a_key: string): bool
         const keymap = this._keymap
-        if a_key == "\<esc>" || a_key == "\<C-c>"
+        if a_key == "\<CursorHold>"
+            return 1
+        elseif a_key == "\<esc>" || a_key == "\<C-c>"
             popup_close(winid, kActionCloseAll)
             return 1
         else
             var key = keymap->get(a_key, a_key)
             if key == 'ENTER' || key == 'DOWN'
                 this.OpenSubMenu(this._curIndex)
-            elseif key == 'LEFT'
-                this._curIndex = max([0, this._curIndex - 1])
-                this.Render()
-            elseif key == 'RIGHT'
-                this._curIndex = min([this._size - 1, this._curIndex + 1])
-                this.Render()
             elseif key =~ '^ACCEPT:'
                 var index = str2nr(key[7 :])
                 this._curIndex = index
-                this.Render()
                 this.OpenSubMenu(this._curIndex)
+                this.Render()
+                redraw
+            else
+                if key == 'LEFT'
+                    this._curIndex -= 1
+                elseif key == 'RIGHT'
+                    this._curIndex += 1
+                endif
+                this._curIndex = max([0, min([this._size - 1, this._curIndex])])
+                this.Render()
+                redraw
             endif
             return 1
         endif
@@ -148,6 +155,7 @@ class MenuBar extends HBox implements VisibleWidget
     enddef
 
     def _Callback(winid: number, index: number): void
+        vhl.CursorShow()
     enddef
 
     def Open(): void
@@ -155,10 +163,12 @@ class MenuBar extends HBox implements VisibleWidget
         mp.Move(this.winid, 1, 1)
         popup_setoptions(this.winid, { zindex: this.zindex })
         popup_show(this.winid)
+        vhl.CursorHide()
     enddef
 
     def Close(): void
         popup_hide(this.winid)
+        vhl.CursorShow()
     enddef
 endclass
 
