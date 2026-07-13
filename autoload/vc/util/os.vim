@@ -10,8 +10,9 @@ const windows: bool = has('win32') || has('win64')
 # Distinguish OS {{{ #
 
 # uname -a
-export def Uname(force: bool = false): string
-    if systemUname != null && !force
+# Uname([{forceReDetect}])
+export def Uname(forceReDetect: bool = false): string
+    if systemUname != null && !forceReDetect
         return systemUname
     endif
 
@@ -32,8 +33,8 @@ enddef
 
 var hasDetectWsl: bool = false
 var wsl: bool = false
-export def IsWsl(force: bool = false): bool
-    if hasDetectWsl && !force
+export def IsWsl(forceReDetect: bool = false): bool
+    if hasDetectWsl && !forceReDetect
         return wsl
     endif
     hasDetectWsl = true
@@ -81,13 +82,13 @@ enddef
 
 
 # Change dir {{{ #
-export def GetCd(): string
+export def GetCdCmd(): string
     return haslocaldir() ? (haslocaldir() == 1 ? 'lcd' : 'tcd') : 'cd'
 enddef
 
 
 export def Chdir(p: string): void
-    silent exec $'{GetCd()} {fnameescape(p)}'
+    silent exec $'{GetCdCmd()} {fnameescape(p)}'
 enddef
 
 

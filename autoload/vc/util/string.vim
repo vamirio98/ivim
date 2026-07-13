@@ -3,8 +3,8 @@ vim9script
 #----------------------------------------------------------------------
 # string replace
 #----------------------------------------------------------------------
-export def Replace(text: string, old: string, new: string): string
-    return substitute(text, old, new, 'g')
+export def Replace(text: string, pat: string, new: string): string
+    return substitute(text, pat, new, 'g')
 enddef
 
 
@@ -36,15 +36,14 @@ enddef
 # string partition
 #----------------------------------------------------------------------
 export def Partition(text: string, sep: string): tuple<string, string, string>
-var pos = stridx(text, sep)
+    var pos = stridx(text, sep)
     if pos < 0
         return (text, '', '')
     else
         var size = strlen(sep)
         var head = strpart(text, 0, pos)
-        var newSep = strpart(text, pos, size)
         var tail = strpart(text, pos + size)
-        return (head, newSep, tail)
+        return (head, sep, tail)
     endif
 enddef
 
