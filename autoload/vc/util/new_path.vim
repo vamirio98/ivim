@@ -36,7 +36,10 @@ export def AsPosix(a_path: string, lower: bool = false): string
     else
         path = a_path->ms.Replace('\', '/')->ms.Replace('\v/+', '/')
     endif
-
+    # if not absolute path, assume that it is in current directory
+    if path !~ '\v^(/|\.|(\a+:))'
+        path = './' .. path
+    endif
     if lower && (windows || has('win32unix'))
         path = tolower(path)
     endif
@@ -209,15 +212,33 @@ class Path
         return [anchor] + this.posix[anchor->len() :]->split('/', 0)
     enddef
 
-    # NOTE: this function will not check the path, so:
+    # NOTE: this just the string opeartation, so:
     # Path('foo/..').Parent() == Path('foo')
     def Parent(): Path
-        var anchor: string = this.Anchor().posix
-        var sep: number = this.posix->strridx('/',
-            this.posix->len() - anchor->len())
-        if sep < 0
-
+        var anchor: Path = this.Anchor()
+        var anchorLen: number = anchor.posix->len()
+        var pos: number = this.posix[anchorLen :]->strridx('/')
+        if pos < 0
+            if !anchor->empty()
+                return anchor
+            else
+                return Path.new('.')
+            endif
+        else
+            return Path.new(this.posix->slice(0, anchorLen + pos))
         endif
+    enddef
+
+    def Parents(): list<Path>
+        var p = this.Parent()
+        var pp = p.Parent()
+        var parents: list<Path> = [ p ]
+        while p.posix != pp.posix
+            p = pp
+            pp = p.Parent()
+            parents->add(p)
+        endwhile
+        return parents
     enddef
 
     def Samefile(other: Path): bool
@@ -610,11 +631,24 @@ if 1
             Pn('c:/a/b').Anchor()->string()->MdEqual('c:/') &&
             Pn('c:a/b').Anchor()->string()->MdEqual('c:') &&
             Pn('/etc').Anchor()->string()->MdEqual('/') &&
+            Pn('.').Anchor()->empty()->Assert() &&
+            Pn('..').Anchor()->empty()->Assert() &&
+            Pn().Anchor()->empty()->Assert() &&
             Pn('\\host/share').Anchor()->string()->MdEqual('//host/share/') &&
             Pn('ftp://a').Anchor()->string()->MdEqual('') &&
             Pn('/usr/bin/python3').Parts()->MdEqual(['/', 'usr', 'bin', 'python3']) &&
             Pn('c:\\Program Files/PSF').Parts()->MdEqual(['c:/', 'Program Files', 'PSF']) &&
-            Pn('ftp://a').Parts()->MdEqual(['ftp:', 'a'])
+            Pn('ftp://a').Parts()->MdEqual(['ftp:', 'a']) &&
+            Pn('/a/b/c/d').Parent()->string()->MdEqual('/a/b/c') &&
+            Pn('/').Parent()->string()->MdEqual('/') &&
+            Pn('.').Parent()->string()->MdEqual('.') &&
+            Pn('').Parent()->string()->MdEqual('.') &&
+            Pn('c:/foo/bar/setup.py').Parents()->copy()
+            ->map((_, v) => v->string())->MdEqual([
+                'c:/foo/bar', 'c:/foo', 'c:/'
+            ]) &&
+            Pn('/a/b/c').Parents()->copy()->map((_, v) => v->string())
+            ->MdEqual(['/a/b', '/a', '/'])
     enddef
 
     def TestIsPath(): bool
