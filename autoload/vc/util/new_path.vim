@@ -85,7 +85,8 @@ class Path
     enddef
 
     def IsAbsolute(): bool
-        return this.posix =~ '\v(^/([^/]|$))|(^\a:($|(/([^/]|$))))' ||
+        return (windows && this.posix =~ '\v^\a:($|(/([^/]|$)))') ||
+            (!windows && this.posix =~ '\v(^/([^/]|$))') ||
             this.IsUnc() || this.IsProtocol()
     enddef
 
@@ -598,7 +599,8 @@ if 1
             (!Path.new('\a\b').IsUnc())->Assert() &&
             Path.new('ab://abc////').IsProtocol()->Assert() &&
             (!Path.new('ab:://ab').IsProtocol())->Assert() &&
-            Path.new('/a').IsAbsolute()->Assert() &&
+            (windows && !Path.new('/a').IsAbsolute())->Assert() &&
+            (windows || Path.new('/a').IsAbsolute())->Assert() &&
             Path.new('a:/b').IsAbsolute()->Assert() &&
             Path.new('a:').IsAbsolute()->Assert() &&
             Path.new('a://').IsAbsolute()->Assert() &&
@@ -607,7 +609,8 @@ if 1
             Path.new('../').IsRelative()->Assert() &&
             Path.new('.').IsRelative()->Assert() &&
             Path.new('..').IsRelative()->Assert() &&
-            (!Path.new('/a').IsRelative())->Assert()
+            (windows && Path.new('/a').IsRelative())->Assert() &&
+            (windows || !Path.new('/a').IsRelative())->Assert()
     enddef
 
     def TestResolve(): bool
