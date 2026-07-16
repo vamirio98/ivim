@@ -13,7 +13,7 @@ export def Notify(what: any, color: string = null_string,
 
     redraw
     exec $'echohl {color}'
-    exec $'echo{keep ? 'm' : ''} ''{msg}'''
+    exec $'echo{keep ? 'm' : ''} ''{msg->substitute("'", "''", 'g')}'''
     echohl None
 enddef
 
