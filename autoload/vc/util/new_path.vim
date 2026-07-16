@@ -39,6 +39,9 @@ export def AsPosix(a_path: string, lower: bool = false): string
             a_path[pos :]->ms.Replace('\', '/')->ms.Replace('\v/+', '/')
     else
         path = a_path->ms.Replace('\', '/')->ms.Replace('\v/+', '/')
+        if lower && (windows || has('win32unix'))
+            path = tolower(path)
+        endif
     endif
     # if not absolute path, assume that it is in current directory
     if path !~ '\v^(/|\.|(\a+:))'
@@ -53,9 +56,6 @@ export def AsPosix(a_path: string, lower: bool = false): string
     # careful for // and c:/  (c:/ != c:)
     if path =~ '\v([^/:])/$'
         path = path[: -2]
-    endif
-    if lower && (windows || has('win32unix'))
-        path = tolower(path)
     endif
     return path
 enddef
