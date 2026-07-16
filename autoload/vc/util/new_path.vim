@@ -19,8 +19,12 @@ export const sepPat: string = (windows && !&shellslash) ? '\v(\/|\\)' : '/'
 # convert a path to posix style
 # {lower}: if ture and the system is Window or wsl,
 # convert all upper case to lower
+# NOTE:
+#   1) if {path} is empty, return '.'
+#   2) the trailing './' will be removed except './' which will return '.'
+#   3) if it's not a absolute path, a leading './' will be add
 export def AsPosix(a_path: string, lower: bool = false): string
-    if empty(a_path) | return '' | endif
+    if empty(a_path) | return '.' | endif
     var path: string = ''
     # start with '//' maybe a protocol, start with more than two '/'
     # should be treat as '/'. See The Open Group Base Specifications Issue 6,
@@ -39,6 +43,16 @@ export def AsPosix(a_path: string, lower: bool = false): string
     # if not absolute path, assume that it is in current directory
     if path !~ '\v^(/|\.|(\a+:))'
         path = './' .. path
+    endif
+    # ./././ => ./
+    path->ms.Replace('\v(\./)+', './')
+    # ./.. => ..
+    path->ms.Replace('\V./..', '..')
+    # ../. => ..
+    path->ms.Replace('\V../.', '..')
+    # careful for // and c:/  (c:/ != c:)
+    if path =~ '\v([^/:])/$'
+        path = path[: -2]
     endif
     if lower && (windows || has('win32unix'))
         path = tolower(path)
@@ -144,20 +158,36 @@ class Path
     enddef
 
 
-    def _JoinTwoPath(a: Path, b: Path, checkAbs: bool = true): Path
+    def _JoinTwoPath(a: Path, b: Path): Path
         if a->empty() | return b | endif
         if b->empty() | return a | endif
 
-        if checkAbs && b.IsAbsolute()
+        if b.IsAbsolute()
             return Path.new(b)
         endif
 
+        var bp: string = b.posix
+        # ignore all '.' and './'
+        if bp == '.'
+            bp = ''
+        endif
+        if bp =~ '\v^\./'
+            bp = bp[2 :]
+        endif
+
         var path: string = a.posix
-        # `b` must not start with '/' if !`ignoreAbs`
-        if path[-1] != '/' && (!checkAbs && b.posix !~ '\v^/')
+        if path[-1] != '/' && (bp !~ '\v^/')
             path ..= '/'
         endif
-        return Path.new(path .. b.posix)
+        return Path.new(path .. bp)
+    enddef
+
+    def Joinpath(...paths: list<any>): Path
+        var np = Path.new(this)
+        for p in paths
+            np = this._JoinTwoPath(np, Path.new(p))
+        endfor
+        return np
     enddef
 
 
@@ -200,7 +230,7 @@ class Path
         if this.IsProtocol()
             return Path.new()
         else
-            return this._JoinTwoPath(this.Drive(), this.Root(), 0)
+            return this._JoinTwoPath(this.Drive(), this.Root())
         endif
     enddef
 
@@ -580,17 +610,17 @@ if 1
         return MdEqual(AsPosix('c:\a\b'), 'c:/a/b') &&
             MdEqual(AsPosix('c:\\a\\\\b'), 'c:/a/b') &&
             MdEqual(AsPosix('////////'), '/') &&
-            MdEqual(AsPosix('/a/'), '/a/') && MdEqual(AsPosix('./'), './') &&
-            MdEqual(AsPosix('../'), '../') &&
-            MdEqual(AsPosix('///a////'), '/a/') &&
-            MdEqual(AsPosix('.//'), './') &&
-            MdEqual(AsPosix('..///'), '../') &&
+            MdEqual(AsPosix('/a/'), '/a') && MdEqual(AsPosix('./'), '.') &&
+            MdEqual(AsPosix('../'), '..') &&
+            MdEqual(AsPosix('///a////'), '/a') &&
+            MdEqual(AsPosix('.//'), '.') &&
+            MdEqual(AsPosix('..///'), '..') &&
             MdEqual(AsPosix('\\a\\\b'), '//a/b') &&
             MdEqual(AsPosix('\\192.168.1.1/a'), '//192.168.1.1/a') &&
-            MdEqual(AsPosix('//a/b/'), '//a/b/') &&
+            MdEqual(AsPosix('//a/b/'), '//a/b') &&
             MdEqual(AsPosix('//a////b'), '//a/b') &&
             MdEqual(AsPosix('ftp://a'), 'ftp://a') &&
-            MdEqual(AsPosix('http://a//'), 'http://a/') &&
+            MdEqual(AsPosix('http://a//'), 'http://a') &&
             MdEqual(AsPosix('//'), '//')
     enddef
 
@@ -599,8 +629,7 @@ if 1
             (!Path.new('\a\b').IsUnc())->Assert() &&
             Path.new('ab://abc////').IsProtocol()->Assert() &&
             (!Path.new('ab:://ab').IsProtocol())->Assert() &&
-            (windows && !Path.new('/a').IsAbsolute())->Assert() &&
-            (windows || Path.new('/a').IsAbsolute())->Assert() &&
+            (windows == !Pn('/a').IsAbsolute())->Assert() &&
             Path.new('a:/b').IsAbsolute()->Assert() &&
             Path.new('a:').IsAbsolute()->Assert() &&
             Path.new('a://').IsAbsolute()->Assert() &&
@@ -609,8 +638,7 @@ if 1
             Path.new('../').IsRelative()->Assert() &&
             Path.new('.').IsRelative()->Assert() &&
             Path.new('..').IsRelative()->Assert() &&
-            (windows && Path.new('/a').IsRelative())->Assert() &&
-            (windows || !Path.new('/a').IsRelative())->Assert()
+            (windows == Pn('/a').IsRelative())->Assert()
     enddef
 
     def TestResolve(): bool
@@ -654,6 +682,12 @@ if 1
             ->MdEqual(['/a/b', '/a', '/'])
     enddef
 
+
+    def TestJoinpath(): bool
+        return Pn('/a').Joinpath(Pn('b'), Pn('c/d'))->string()->MdEqual('/a/b/c/d') &&
+            Pn('/a').Joinpath('/b')->string()->MdEqual(windows ? '/a/b' : '/b')
+    enddef
+
     def TestIsPath(): bool
         return Assert(IsPath('.')) && Assert(IsPath('..')) &&
             Assert(IsPath('./')) && Assert(IsPath('../')) &&
@@ -673,7 +707,8 @@ if 1
             TestAsPosix() &&
             TestPathType() &&
             TestResolve() &&
-            TestParts()
+            TestParts() &&
+            TestJoinpath()
     enddef
 
     Test()
