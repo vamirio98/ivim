@@ -272,6 +272,30 @@ class Path
         return parents
     enddef
 
+    def Name(): string
+        var anchor: string = this.Anchor().posix
+        var pos = this.posix[anchor->len() :]->strridx('/')
+        return pos < 0 ? '' : this.posix[anchor->len() :][pos + 1 :]
+    enddef
+
+    def Suffix(): string
+        var name: string = this.Name()
+        var pos = name->strridx('.')
+        return (pos < 0 || pos == 0) ? '' : name[pos :]
+    enddef
+
+    def Suffixes(): list<string>
+        var name: string = this.Name()
+        var pos = name->stridx('.', 1)
+        return pos < 0 ? [] : name[pos :]->split('\ze\.')
+    enddef
+
+    def Stem(): string
+        var name: string = this.Name()
+        var suffix: string = this.Suffix()
+        return name->slice(0, name->len() - suffix->len())
+    enddef
+
     def Samefile(other: Path): bool
         return this.Resolve().path == other.Resolve().path
     enddef
@@ -679,7 +703,20 @@ if 1
                 'c:/foo/bar', 'c:/foo', 'c:/'
             ]) &&
             Pn('/a/b/c').Parents()->copy()->map((_, v) => v->string())
-            ->MdEqual(['/a/b', '/a', '/'])
+            ->MdEqual(['/a/b', '/a', '/']) &&
+            Pn('my/library/setup.py').Name()->MdEqual('setup.py') &&
+            Pn('//some/share/setup.py').Name()->MdEqual('setup.py') &&
+            Pn('//some/share/').Name()->MdEqual('') &&
+            Pn('my/library/a.vim').Suffix()->MdEqual('.vim') &&
+            Pn('my/library/a.tar.gz').Suffix()->MdEqual('.gz') &&
+            Pn('my/library').Suffix()->MdEqual('') &&
+            Pn('my/library/.ignore').Suffix()->MdEqual('') &&
+            Pn('my/library/a.').Suffix()->MdEqual('.') &&
+            Pn('my/library.tar.gz').Suffixes()->MdEqual(['.tar', '.gz']) &&
+            Pn('my/library').Suffixes()->MdEqual([]) &&
+            Pn('my/library.tar.gz').Stem()->MdEqual('library.tar') &&
+            Pn('my/library.tar').Stem()->MdEqual('library') &&
+            Pn('my/library').Stem()->MdEqual('library')
     enddef
 
 
