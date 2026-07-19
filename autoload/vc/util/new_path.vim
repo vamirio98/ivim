@@ -61,6 +61,26 @@ export def AsPosix(a_path: string, lower: bool = false): string
 enddef
 
 
+export def ExpandPath(a_path: string): string
+    var path: string = a_path
+    if path =~ "'."
+        try
+            var m: string = execute($"silent exec ':marks' {path[1]}")
+            path = m->split("\n")[-1]->split()[-1]
+            path = path->filereadable() ? path : null_string
+        catch
+            path = '%'
+        endtry
+    endif
+
+    if path == '%' || path =~ '\v^\~'
+        path = path->expand()
+    endif
+
+    return path
+enddef
+
+
 class Path
     var path: string = null_string  # raw as user input
     var posix: string = null_string  # store as posix style
@@ -71,7 +91,7 @@ class Path
         endif
 
         if a_path->type() == v:t_string
-            this.path = a_path
+            this.path = a_path->ExpandPath()
         elseif a_path->instanceof(Path)
             this.path = a_path.path
         else
@@ -296,134 +316,148 @@ class Path
         return name->slice(0, name->len() - suffix->len())
     enddef
 
-    def Samefile(other: Path): bool
-        return this.Resolve().path == other.Resolve().path
+    def Native(): string
+        return (this.IsProtocol() || !windows) ? this.posix :
+            this.posix->tr('/', '\')
     enddef
 
+    # whether this path has sub-file {path}
+    def Contains(a_path: any): bool
+        var p = Path.new(a_path)
+        return p.Resolve().path->stridx(this.Resolve().path) == 0
+    enddef
+
+    def RelativeTo(a_other: any): Path
+        var other = Path.new(a_other).Resolve()
+        var op: string = other.posix
+        var oa: string = other.Anchor().posix
+        var path: string = this.Resolve().posix
+        var head: string = ''
+        while 1
+            if path->stridx(op) == 0
+                path = path[op->len() :]
+                if path =~ '\v^/'
+                    path = path[1 :]
+                endif
+                return Path.new(head .. path)
+            endif
+
+            if op->len() <= oa->len()
+                break
+            endif
+            op = op->slice(0, op->strridx('/'))
+            head = '../' .. head
+        endwhile
+        throw $'no common part in ''{this.path}'' and ''{Path.new(a_other).path}'''
+    enddef
+
+    def WithName(a_name: string): Path
+        var name: string = this.Name()
+        if name->empty()
+            throw $'{this.path} has an empty name'
+        endif
+        return Path.new(this.path->slice(0, -(name->len())) .. a_name)
+    enddef
+
+    def WithStem(a_stem: string): Path
+        var name: string = this.Name()
+        var suffix: string = this.Suffix()
+        if name->empty()
+            throw $'{this.path} has an empty name'
+        endif
+        return Path.new(this.path->slice(0, -(name->len())) .. a_stem .. suffix)
+    enddef
+
+    def WithSuffix(a_suffix: string): Path
+        if a_suffix !~ '\v^\.' && !a_suffix->empty()
+            throw $'invalid suffix ''{a_suffix}'''
+        endif
+        var suffix: string = this.Suffix()
+        return Path.new(this.path[: -(suffix->len() + 1)] .. a_suffix)
+    enddef
+
+    def IterDir(): list<Path>
+        if !this.IsDir()
+            throw $'{this.path} is not a directory'
+        endif
+        return readdir(this.posix)->map((_, v) => Path.new(this.path .. '/' .. v))
+    enddef
+
+    def IsSamefile(other: Path): bool
+        return this.Resolve(1).path == other.Resolve(1).path
+    enddef
+
+    # :h mkdir
+    def Mkdir(mode: number = 0o755, flags: string = ''): number
+        return this.Resolve().posix->mkdir(flags, mode)
+    enddef
+
+    def Unlink(): void
+        if this.IsDir()
+            return this.Rmdir()
+        endif
+        return this.Resolve().posix->delete()
+    enddef
+
+    def Rmdir(): number
+        return this.Resolve().posix->delete('d')
+    enddef
 endclass
 
+var P = Path.new
 
-export def IsPath(path: string): bool
-    return path =~ '\v((^(\/|\\|(\a:[\/\\])))|(^(\.{1,2})[\/\\])|(^(\.{1,2})$))'
+export def Home(): Path
+    return P('~')
 enddef
 
-export def IsDir(path: string): bool
-    return isdirectory(path)
+export def Cwd(): Path
+    return P('.')
 enddef
 
-export def IsFile(path: string): bool
-    return filereadable(path) || (!glob(path, 1)->empty() && !isdirectory(path))
+export def IsPath(a_path: string): bool
+    return P(a_path).IsPath()
+enddef
+
+export def IsDir(a_path: string): bool
+    return P(a_path).IsDir()
+enddef
+
+export def IsFile(a_path: string): bool
+    return P(a_path).IsFile()
 enddef
 
 
 # return the name of entry
-export def ReadDir(dir: string): list<string>
+export def IterDir(dir: string): list<string>
     return readdir(dir)
 enddef
 
 
-export def Abspath(path: string): string
-    var p: string = path
-    if p =~ "'."
-        try
-            var m: string = execute($"silent exec ':marks' {p[1]}")
-            p = m->split('\n')[-1]->split()[-1]
-            p = filereadable(p) ? p : null_string
-        catch
-            p = '%'
-        endtry
-    endif
-
-    if p == '%'
-        p = expand('%')
-        if &bt == 'terminal'
-            p = null_string
-        elseif &bt != ''
-            var isDir: bool = false
-            if p =~ '\v^fugitive\:[\\\/]{3}'
-                return Abspath(p)
-            elseif p =~ '[\/\\]$'
-                if p =~ '^[\/\\]' || p =~ '\v^\a:[\/\\]'
-                    isDir = isdirectory(p)
-                endif
-            endif
-            p = isDir ? p : null_string
-        endif
-    elseif p =~ '\v^\~[\/\\]?'
-        p = expand(p)
-    elseif p =~ '\v^fugitive\:[\\\/]{3}'
-        p = strpart(p, windows ? 12 : 11)
-        var pos: number = stridx(p, '.git')
-        if pos >= 0
-            p = strpart(p, 0, pos)
-        endif
-        p = fnamemodify(p, ':h')
-    endif
-    p = fnamemodify(p, ':p')
-    p = substitute(p, '\v[\/\\]+', (windows ? '\\' : '/'), 'g')
-    if p =~ '[\/\\]$'
-        p = fnamemodify(p, ':h')
-    endif
-    return p
+export def Absolute(a_path: string): string
+    return P(a_path).Resolve().Native()
 enddef
 
 
-#----------------------------------------------------------------------
-# check absolute path name
-#----------------------------------------------------------------------
-export def IsAbs(path: string): bool
-    if path->empty()
-        return false
-    endif
-    if path[0] == '~'
-        return true
-    endif
-    if windows
-        if path =~ '\v^\a:[\/\\]' | return true | endif
-        if path[0] == '\' | return true | endif
-        return false
-    endif
-    return path[0] == '/'
-enddef
-
-
-#----------------------------------------------------------------------
-# join two path
-#----------------------------------------------------------------------
-def JoinTwoPath(home: string, name: string): string
-    if empty(home) | return name | endif
-    if empty(name) | return home | endif
-
-    if IsAbs(name)
-        return name
-    endif
-    var path: string = null_string
-    if path[-1] =~ sepPat
-        path = path .. name
-    else
-        path = home .. sep .. name
-    endif
-    path = substitute(path, '\v[\/\\]+', (windows ? '\\' : '/'), 'g')
-    return path
+export def IsAbsolute(a_path: string): bool
+    return P(a_path).IsAbsolute()
 enddef
 
 
 #--------------------------------------------------------------
 # python: os.path.join
 #--------------------------------------------------------------
-export def Join(...paths: list<string>): string
-    var ret: string = null_string
-    for p in paths
-        ret = JoinTwoPath(ret, p)
-    endfor
-    return ret
+export def Joinpath(...paths: list<string>): string
+    if paths->empty()
+        return ''
+    endif
+    return P(path[0]).Joinpath(paths[1 :])
 enddef
 
 
 #----------------------------------------------------------------------
 # dirname
 #----------------------------------------------------------------------
-export def Dirname(path: string): string
+export def Parent(path: string): string
     return fnamemodify(path, ':h')
 enddef
 
@@ -431,57 +465,26 @@ enddef
 #----------------------------------------------------------------------
 # basename of /foo/bar is bar
 #----------------------------------------------------------------------
-export def Basename(path: string): string
+export def Name(path: string): string
     return fnamemodify(path, ':t')
 enddef
 
 
 #----------------------------------------------------------------------
-# Normalize({path} [, {lower}])
-# normalize, translate path to unix format absoute path
+# resolve the {path}, return the native format
 # {lower} Whether to translate to uppercase to lowercase, useful when
 #         on Windows, default: false
 #----------------------------------------------------------------------
-export def Normalize(path: string, lower: bool = false): string
-    if empty(path) | return '' | endif
-
-    var newPath: string = path
-    if (!windows && newPath !~ '^/') || (windows && newPath !~ '^\a:[\/\\]')
-        newPath = fnamemodify(newPath, ':p')
-    endif
-    if windows
-        newPath = tr(newPath, '\', '/')
-    endif
-    if lower && (windows || has('win32unix'))
-        newPath = tolower(newPath)
-    endif
-    newPath = substitute(newPath, '\v/+', '/', 'g')
-    if newPath =~ '^/$' || (windows && newPath =~ '^\a:/$')
-        return newPath
-    endif
-    if newPath[-1] == '/'
-        newPath = fnamemodify(newPath, ':h')
-    endif
-    return newPath
+export def Resolve(path: string, lower: bool = false): string
+    return P(path).Resolve().Native()
 enddef
 
 
-#----------------------------------------------------------------------
-# normal case, if on Windows and path contains uppercase letter,
-# change it to lowercase
-#----------------------------------------------------------------------
-export def Normcase(path: string): string
-    return (windows && !has('win32unix')) ? tolower(path) : path
-enddef
-
-
-export def Equal(path1: string, path2: string): bool
+export def IsSamefile(path1: string, path2: string): bool
     if path1 == path2
         return true
     endif
-    var p1: string = Normcase(Abspath(path1))
-    var p2: string = Normcase(Abspath(path2))
-    return p1 == p2
+    return P(path1).IsSamefile(path2)
 enddef
 
 
@@ -489,9 +492,7 @@ enddef
 # return true if base directory contains child
 #----------------------------------------------------------------------
 export def Contains(base: string, child: string): bool
-    var newBase: string = Abspath(base)->Normalize(true)
-    var newChild: string = Abspath(child)->Normalize(true)
-    return stridx(newChild, newBase) == 0
+    return P(base).Contains(child)
 enddef
 
 
@@ -499,66 +500,7 @@ enddef
 # return a relative version of a path
 #----------------------------------------------------------------------
 export def Relpath(path: string, base: string = null_string): string
-    var newPath: string = Abspath(path)->Normalize(true)
-    var newBase: string = Abspath(base == null ? '.' : base)->Normalize(true)
-    var head: string = null_string
-    while true
-        if Contains(newBase, newPath)
-            var size: number = strlen(newBase) + (newBase =~ '/$' ? 0 : 1)
-            var relpath: string = head .. strpart(newPath, size)
-            if windows
-                relpath = substitute(relpath, '/', '\\', 'g')
-            endif
-            return relpath == '' ? '.' : relpath
-        endif
-
-        var prev: string = newBase
-        head = '../' .. head
-        newBase = fnamemodify(newBase, ':h')
-        if newBase == prev
-            break
-        endif
-    endwhile
-    throw $'error: no common part in {path} and {base}'
-enddef
-
-
-#----------------------------------------------------------------------
-# python: os.path.split
-#----------------------------------------------------------------------
-export def Split(path: string): tuple<string, string>
-    var p1 = fnamemodify(path, ':h')
-    var p2 = fnamemodify(path, ':t')
-    return (p1, p2)
-enddef
-
-
-#----------------------------------------------------------------------
-# split externsion, return (main, ext)
-#----------------------------------------------------------------------
-export def SplitExt(path: string): tuple<string, string>
-    var dotPos: number = strridx(path, '.')
-    if dotPos <= 0
-        return (path, null_string)
-    endif
-    var sepPos: number = strridx(path, sep)
-    if sepPos > dotPos || sepPos == dotPos - 1
-        return (path, null_string)
-    endif
-    var main: string = strpart(path, 0, dotPos)
-    var ext: string = strpart(path, dotPos + 1)
-    return (main, ext)
-enddef
-
-
-#----------------------------------------------------------------------
-# strip ending slash
-#----------------------------------------------------------------------
-export def StripSlash(path: string): string
-    if path =~ '\v[\/\\]$'
-        return fnamemodify(path, ':h')
-    endif
-    return path
+    return P(path).RelativeTo(base)
 enddef
 
 
@@ -566,32 +508,7 @@ enddef
 # exists
 #----------------------------------------------------------------------
 export def Exists(path: string): bool
-    return isdirectory(path) || filereadable(path) || !empty(glob(path, 1))
-enddef
-
-
-#----------------------------------------------------------------------
-# Win2Unix({winpath} [, {prefix}])
-# {prefix} Path prefix, will be add to `winpath`,
-#          default: ''
-#----------------------------------------------------------------------
-export def Win2Unix(winpath: string, prefix: string = '/'): string
-    var p: string = null_string
-    if winpath =~ '^\a:[\/\\]'
-        var drive: string = tolower(winpath[0])
-        var name: string = strpart(winpath, 3)
-        name = substitute(name, '\v[\/\\]+', '/', 'g')
-        p = Join(prefix, drive, name)
-        return substitute(p, '\v[\/\\]+', '/', 'g')
-    elseif winpath =~ '^[\/\\]'
-        var drive: string = tolower(strpart(getcwd(), 0, 1))
-        var name: string = strpart(winpath, 1)
-        name = substitute(name, '\v[\/\\]+', '/', 'g')
-        p = Join(prefix, drive, name)
-        return substitute(p, '\v[\/\\]+', '/', 'g')
-    else
-        return substitute(winpath, '\v[\/\\]+', '/', 'g')
-    endif
+    return P(path).Exists()
 enddef
 
 
@@ -600,24 +517,20 @@ enddef
 # shorten path
 # {limit} The path length limit, default: 40
 #----------------------------------------------------------------------
-export def Shorten(path: string, limit: number = 40): string
+export def Shorten(a_path: string, limit: number = 40): string
     var home: string = expand('~')
-    var newPath: string = path
-    var size: number = 0
-    if Contains(home, path)
-        size = strlen(home)
-        newPath = Join('~', strpart(newPath, size + 1))
+    var path: string = a_path
+    if path->stridx(home) == 0
+        path = '~' .. path->slice(home->strlen())
     endif
-    size = strlen(newPath)
+    var size: number = path->strlen()
     if size > limit
-        var t: string = pathshorten(newPath, 2)
-        size = strlen(t)
-        if size > limit
-            return pathshorten(newPath)
+        path = path->pathshorten(2)
+        if path->strlen() > limit
+            return path->pathshorten()
         endif
-        return t
     endif
-    return newPath
+    return path
 enddef
 
 
@@ -627,8 +540,6 @@ if 1
 
     var Assert = debug.Assert
     var MdEqual = debug.Equal
-
-    var Pn = Path.new
 
     def TestAsPosix(): bool
         return MdEqual(AsPosix('c:\a\b'), 'c:/a/b') &&
@@ -649,80 +560,93 @@ if 1
     enddef
 
     def TestPathType(): bool
-        return Path.new('\\a\b').IsUnc()->Assert() &&
-            (!Path.new('\a\b').IsUnc())->Assert() &&
-            Path.new('ab://abc////').IsProtocol()->Assert() &&
-            (!Path.new('ab:://ab').IsProtocol())->Assert() &&
-            (windows == !Pn('/a').IsAbsolute())->Assert() &&
-            Path.new('a:/b').IsAbsolute()->Assert() &&
-            Path.new('a:').IsAbsolute()->Assert() &&
-            Path.new('a://').IsAbsolute()->Assert() &&
-            (!Path.new('//').IsAbsolute())->Assert() &&
-            Path.new('./').IsRelative()->Assert() &&
-            Path.new('../').IsRelative()->Assert() &&
-            Path.new('.').IsRelative()->Assert() &&
-            Path.new('..').IsRelative()->Assert() &&
-            (windows == Pn('/a').IsRelative())->Assert()
+        return P('\\a\b').IsUnc()->Assert() &&
+            (!P('\a\b').IsUnc())->Assert() &&
+            P('ab://abc////').IsProtocol()->Assert() &&
+            (!P('ab:://ab').IsProtocol())->Assert() &&
+            (windows == !P('/a').IsAbsolute())->Assert() &&
+            P('a:/b').IsAbsolute()->Assert() &&
+            P('a:').IsAbsolute()->Assert() &&
+            P('a://').IsAbsolute()->Assert() &&
+            (!P('//').IsAbsolute())->Assert() &&
+            P('./').IsRelative()->Assert() &&
+            P('../').IsRelative()->Assert() &&
+            P('.').IsRelative()->Assert() &&
+            P('..').IsRelative()->Assert() &&
+            (windows == P('/a').IsRelative())->Assert()
     enddef
 
-    def TestResolve(): bool
-        if windows
-            return Path.new('/a/b///').Resolve()->string()
-                ->MdEqual('/a/b'->fnamemodify(':p')->tr('\', '/'))
-        else
-            return true
-        endif
+    def TestParse(): bool
+        # should throw except
+        # echo P('c:/etc').RelativeTo('d:/usr')
+        # echo P('c:/').WithName('a.vim')
+        # echo P('c:/').WithStem('a')
+        return P('/a/b///').Resolve().Native()
+            ->MdEqual('/a/b'->fnamemodify(':p')) &&
+            P('a/b/c').Native()->MdEqual('.\a\b\c') &&
+            P('/a/b').Contains('/a/b/c')->Assert() &&
+            (!P('/a/b').Contains('/a'))->Assert() &&
+            P('/etc/passwd').RelativeTo('/')->string()->MdEqual('etc/passwd') &&
+            P('/etc/passwd').RelativeTo('/etc')->string()->MdEqual('passwd') &&
+            P('c:/d/e.tar.gz').WithName('a.vim')->string()->MdEqual('c:/d/a.vim') &&
+            P('c:/a/b.txt').WithStem('c')->string()->MdEqual('c:/a/c.txt') &&
+            P('c:/a/b.tar.gz').WithStem('c')->string()->MdEqual('c:/a/c.gz') &&
+            P('c:/a/b.tar.gz').WithSuffix('.bz2')->string()->MdEqual('c:/a/b.tar.bz2') &&
+            P('c:/a/b').WithSuffix('.txt')->string()->MdEqual('c:/a/b.txt') &&
+            P('c:/a/b.txt').WithSuffix('')->string()->MdEqual('c:/a/b') &&
+            Home()->string()->MdEqual(expand('~')) &&
+            Cwd()->string()->MdEqual(expand('.'))
     enddef
 
     def TestParts(): bool
-        return Path.new('//server').Drive()->string()->MdEqual('//server') &&
-            Path.new('//server/share').Drive()->string()->MdEqual('//server/share') &&
-            Path.new('//server/share/a').Drive()->string()->MdEqual('//server/share') &&
-            Pn('ftp://a').Drive()->string()->MdEqual('') &&
-            Pn('c:/a/').Root()->string()->MdEqual('/') &&
-            Pn('c:a').Root()->string()->MdEqual('') &&
-            Pn('/').Root()->string()->MdEqual('/') &&
-            Pn('ftp://a').Root()->string()->MdEqual('') &&
-            Pn('c:/a/b').Anchor()->string()->MdEqual('c:/') &&
-            Pn('c:a/b').Anchor()->string()->MdEqual('c:') &&
-            Pn('/etc').Anchor()->string()->MdEqual('/') &&
-            Pn('.').Anchor()->empty()->Assert() &&
-            Pn('..').Anchor()->empty()->Assert() &&
-            Pn().Anchor()->empty()->Assert() &&
-            Pn('\\host/share').Anchor()->string()->MdEqual('//host/share/') &&
-            Pn('ftp://a').Anchor()->string()->MdEqual('') &&
-            Pn('/usr/bin/python3').Parts()->MdEqual(['/', 'usr', 'bin', 'python3']) &&
-            Pn('c:\\Program Files/PSF').Parts()->MdEqual(['c:/', 'Program Files', 'PSF']) &&
-            Pn('ftp://a').Parts()->MdEqual(['ftp:', 'a']) &&
-            Pn('/a/b/c/d').Parent()->string()->MdEqual('/a/b/c') &&
-            Pn('/').Parent()->string()->MdEqual('/') &&
-            Pn('.').Parent()->string()->MdEqual('.') &&
-            Pn('').Parent()->string()->MdEqual('.') &&
-            Pn('c:/foo/bar/setup.py').Parents()->copy()
+        return P('//server').Drive()->string()->MdEqual('//server') &&
+            P('//server/share').Drive()->string()->MdEqual('//server/share') &&
+            P('//server/share/a').Drive()->string()->MdEqual('//server/share') &&
+            P('ftp://a').Drive()->string()->MdEqual('') &&
+            P('c:/a/').Root()->string()->MdEqual('/') &&
+            P('c:a').Root()->string()->MdEqual('') &&
+            P('/').Root()->string()->MdEqual('/') &&
+            P('ftp://a').Root()->string()->MdEqual('') &&
+            P('c:/a/b').Anchor()->string()->MdEqual('c:/') &&
+            P('c:a/b').Anchor()->string()->MdEqual('c:') &&
+            P('/etc').Anchor()->string()->MdEqual('/') &&
+            P('.').Anchor()->empty()->Assert() &&
+            P('..').Anchor()->empty()->Assert() &&
+            P().Anchor()->empty()->Assert() &&
+            P('\\host/share').Anchor()->string()->MdEqual('//host/share/') &&
+            P('ftp://a').Anchor()->string()->MdEqual('') &&
+            P('/usr/bin/python3').Parts()->MdEqual(['/', 'usr', 'bin', 'python3']) &&
+            P('c:\\Program Files/PSF').Parts()->MdEqual(['c:/', 'Program Files', 'PSF']) &&
+            P('ftp://a').Parts()->MdEqual(['ftp:', 'a']) &&
+            P('/a/b/c/d').Parent()->string()->MdEqual('/a/b/c') &&
+            P('/').Parent()->string()->MdEqual('/') &&
+            P('.').Parent()->string()->MdEqual('.') &&
+            P('').Parent()->string()->MdEqual('.') &&
+            P('c:/foo/bar/setup.py').Parents()->copy()
             ->map((_, v) => v->string())->MdEqual([
                 'c:/foo/bar', 'c:/foo', 'c:/'
             ]) &&
-            Pn('/a/b/c').Parents()->copy()->map((_, v) => v->string())
+            P('/a/b/c').Parents()->copy()->map((_, v) => v->string())
             ->MdEqual(['/a/b', '/a', '/']) &&
-            Pn('my/library/setup.py').Name()->MdEqual('setup.py') &&
-            Pn('//some/share/setup.py').Name()->MdEqual('setup.py') &&
-            Pn('//some/share/').Name()->MdEqual('') &&
-            Pn('my/library/a.vim').Suffix()->MdEqual('.vim') &&
-            Pn('my/library/a.tar.gz').Suffix()->MdEqual('.gz') &&
-            Pn('my/library').Suffix()->MdEqual('') &&
-            Pn('my/library/.ignore').Suffix()->MdEqual('') &&
-            Pn('my/library/a.').Suffix()->MdEqual('.') &&
-            Pn('my/library.tar.gz').Suffixes()->MdEqual(['.tar', '.gz']) &&
-            Pn('my/library').Suffixes()->MdEqual([]) &&
-            Pn('my/library.tar.gz').Stem()->MdEqual('library.tar') &&
-            Pn('my/library.tar').Stem()->MdEqual('library') &&
-            Pn('my/library').Stem()->MdEqual('library')
+            P('my/library/setup.py').Name()->MdEqual('setup.py') &&
+            P('//some/share/setup.py').Name()->MdEqual('setup.py') &&
+            P('//some/share/').Name()->MdEqual('') &&
+            P('my/library/a.vim').Suffix()->MdEqual('.vim') &&
+            P('my/library/a.tar.gz').Suffix()->MdEqual('.gz') &&
+            P('my/library').Suffix()->MdEqual('') &&
+            P('my/library/.ignore').Suffix()->MdEqual('') &&
+            P('my/library/a.').Suffix()->MdEqual('.') &&
+            P('my/library.tar.gz').Suffixes()->MdEqual(['.tar', '.gz']) &&
+            P('my/library').Suffixes()->MdEqual([]) &&
+            P('my/library.tar.gz').Stem()->MdEqual('library.tar') &&
+            P('my/library.tar').Stem()->MdEqual('library') &&
+            P('my/library').Stem()->MdEqual('library')
     enddef
 
 
     def TestJoinpath(): bool
-        return Pn('/a').Joinpath(Pn('b'), Pn('c/d'))->string()->MdEqual('/a/b/c/d') &&
-            Pn('/a').Joinpath('/b')->string()->MdEqual(windows ? '/a/b' : '/b')
+        return P('/a').Joinpath(P('b'), P('c/d'))->string()->MdEqual('/a/b/c/d') &&
+            P('/a').Joinpath('/b')->string()->MdEqual(windows ? '/a/b' : '/b')
     enddef
 
     def TestIsPath(): bool
@@ -730,20 +654,20 @@ if 1
             Assert(IsPath('./')) && Assert(IsPath('../')) &&
             Assert(IsPath('./a')) && Assert(IsPath('../a')) &&
             Assert(IsPath('./a/..')) && Assert(IsPath('../a/..')) &&
-            Assert(!IsPath('...')) &&
+            Assert(IsPath('...')) &&
             Assert(IsPath('C:/')) && Assert(IsPath('C:\\')) &&
             Assert(IsPath('C:/a')) && Assert(IsPath('C:\\a')) &&
             Assert(IsPath('C:/a\\..')) && Assert(IsPath('C:\\a/..')) &&
             Assert(IsPath('/tmp')) && Assert(IsPath('/tmp/')) &&
             Assert(IsPath('/tmp/..')) && Assert(IsPath('/tmp\\..')) &&
-            Assert(!IsPath('https://')) && Assert(!IsPath(''))
+            Assert(IsPath('https://')) && Assert(IsPath(''))
     enddef
 
     def Test(): void
         TestIsPath() &&
             TestAsPosix() &&
             TestPathType() &&
-            TestResolve() &&
+            TestParse() &&
             TestParts() &&
             TestJoinpath()
     enddef
