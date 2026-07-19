@@ -7,7 +7,7 @@ import autoload "vc/util/keymap.vim"
 
 g:asynctasks_extra_config = get(g:, 'asynctasks_extra_config', [])
 g:asynctasks_extra_config += [
-  path.Abspath(path.Join(g:vc_home,
+  path.Resolve(path.Joinpath(g:vc_home,
     'site/third_party/asynctasks/tasks.ini')
   )
 ]

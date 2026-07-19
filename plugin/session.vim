@@ -14,7 +14,7 @@ import autoload "vc/util/keymap.vim"
 
 g:vc_cache_dir = get(g:, 'vc_cache_dir', resolve(expand('~/.cache/vim')))
 g:vc_session_dir = get(g:, 'vc_session_dir',
-  path.Join(g:vc_cache_dir, 'session'))
+  path.Joinpath(g:vc_cache_dir, 'session'))
 # auto update session when leave vim
 g:vc_auto_update_session = get(g:, 'vc_auto_update_session', 1)
 
@@ -35,7 +35,7 @@ enddef
 
 def WriteSessionFile(name: string): void
   var new_name: string = fnamemodify(name, ':t')
-  exec 'silent mksession!' path.Join(s_session_dir, new_name)
+  exec 'silent mksession!' path.Joinpath(s_session_dir, new_name)
 enddef
 
 # SessionSave({bang} [, {name} [, {silent}]])
@@ -64,7 +64,7 @@ def g:SessionSave(bang: bool = false, name: string = null_string,
     return
   endif
 
-  var file: string = path.Join(s_session_dir, new_name)
+  var file: string = path.Joinpath(s_session_dir, new_name)
 
   if filereadable(file) && !bang
     var choice: number = interact.Confirm(
@@ -99,7 +99,7 @@ def g:SessionLoad(load_last_session: bool = false, name: string = null_string,
     return
   endif
 
-  var file: string = path.Join(s_session_dir, new_name)
+  var file: string = path.Joinpath(s_session_dir, new_name)
   if !filereadable(file)
     notify.Error('The session file does not exist: ' .. file)
     return
@@ -130,7 +130,7 @@ def g:SessionDelete(bang: bool = false, name: string = null_string,
     return
   endif
 
-  var file: string = path.Join(s_session_dir, new_name)
+  var file: string = path.Joinpath(s_session_dir, new_name)
   if !filereadable(file)
     notify.Error('No such file: ' .. file)
     return

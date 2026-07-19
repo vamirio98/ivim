@@ -250,10 +250,10 @@ export def Alloc(hasName: bool = false, name: string = null_string): number
         endif
     else
         if fname != null
-            fpath = path.Join(os.TmpDir(), fname)
+            fpath = path.Joinpath(os.TmpDir(), fname)
         else
             fpath = os.TmpFile()
-            fname = path.Basename(fpath)
+            fname = path.Name(fpath)
         endif
         if s_named.Exists(fname)
             throw $'{name} is already exists'

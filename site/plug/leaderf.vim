@@ -32,7 +32,7 @@ g:Lf_ShowHidden = 1
 g:Lf_MruFileExclude = get(g:, 'Lf_MruFileExclude', [])
 for plugin in values(g:plugs)
   var plug_dir: string = plugin.dir
-  var doc: string = path.Join(plug_dir, 'doc', '*')
+  var doc: string = path.Joinpath(plug_dir, 'doc', '*')
   g:Lf_MruFileExclude += [doc]
 endfor
 # }}}
@@ -41,7 +41,7 @@ endfor
 if plug.Has('vim-gutentags')
   g:Lf_GtagsGutentags = 1
   g:Lf_CacheDirectory = g:vc_cache_dir
-  var tag_cache_dir: string = path.Join(g:Lf_CacheDirectory, "LeaderF", "gtags")
+  var tag_cache_dir: string = path.Joinpath(g:Lf_CacheDirectory, "LeaderF", "gtags")
   # FIXME: cmd.exe can _NOT_ handle '\\' in file path
   tag_cache_dir = substitute(tag_cache_dir, '\\\\', '\\', 'g')
   if !isdirectory(tag_cache_dir)

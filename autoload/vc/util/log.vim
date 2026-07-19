@@ -1,7 +1,7 @@
 vim9script
 
 import autoload './notify.vim'
-import autoload './path.vim'
+import autoload './path.vim' as mpath
 
 var msgQueue = []
 
@@ -23,13 +23,13 @@ def Init(): void
     endif
 
     var today: string = strftime('%y-%m-%d')
-    logPath = path.Join(g:vc_log_dir, $'{today}.log')->path.Abspath()
+    logPath = mpath.Path.new(g:vc_log_dir).Joinpath($'{today}.log').Resolve().Native()
 
     # Clean up log older than `g:vc_log_keep_time`
     var curTime: number = localtime()
     var interval: number = g:vc_log_keep_time * 24 * 60 * 60
     var needDel: list<string> = []
-    for f in glob(path.Abspath(g:vc_log_dir) .. path.sep .. '*', true, true)
+    for f in glob(mpath.Resolve(g:vc_log_dir) .. mpath.sep .. '*', true, true)
         if curTime - getftime(f) >= interval
             needDel->add(f)
         endif

@@ -29,14 +29,14 @@ endif
 # {{{ update colortheme for lightline
 def UpdateTheme()
   if plug.Has('lightline.vim')
-    var dst_dir: string = path.Abspath('~/.vim/autoload/lightline/colorscheme/')
+    var dst_dir: string = path.Resolve('~/.vim/autoload/lightline/colorscheme/')
     if !isdirectory(dst_dir)
       silent! mkdir(dst_dir, 'p')
     endif
 
-    var src: string = path.Join(plug.PluginDir('gruvbox-material'),
+    var src: string = path.Joinpath(plug.PluginDir('gruvbox-material'),
       'autoload/lightline/colorscheme/gruvbox_material.vim')
-    var dst: string = path.Join(dst_dir, 'gruvbox_material.vim')
+    var dst: string = path.Joinpath(dst_dir, 'gruvbox_material.vim')
     if !filereadable(dst)
       filecopy(src, dst)
     elseif getftime(src) > getftime(dst)

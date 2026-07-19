@@ -163,4 +163,4 @@ g:maplocalleader = '\'
 # see :h 'directory'
 # use trailing '//' to make the swapfile name built from the complete path
 # to the file with all path separators substituted to percent '%' signs
-exec 'set directory=' .. path.StripSlash(g:vc_swapfile_dir) .. '//'
+exec 'set directory=' .. path.Path.new(g:vc_swapfile_dir).Native() .. '//'

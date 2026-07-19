@@ -2,14 +2,14 @@ vim9script
 
 import autoload './autoload/vc/util/log.vim'
 import autoload './autoload/vc/util/notify.vim'
-import autoload './autoload/vc/util/path.vim'
+import autoload './autoload/vc/util/path.vim' as mpath
 
 # global variable
 g:vc_listchars = get(g:, 'vc_listchars', 'tab:\│\ ,trail:.,extends:>,precedes:<')
 g:vc_rootmarkers = ['.git', '.svn', '.hg', '.root', '.project']
-g:vc_cache_dir = path.Abspath('~/.cache/vim')
-g:vc_plug_home = path.Abspath('~/.vim/plugged')
-g:vc_swapfile_dir = path.Abspath('~/.cache/vim/swapfiles')
+g:vc_cache_dir = mpath.Absolute('~/.cache/vim')
+g:vc_plug_home = mpath.Absolute('~/.vim/plugged')
+g:vc_swapfile_dir = mpath.Absolute('~/.cache/vim/swapfiles')
 
 log.Info('start loading vc...')
 

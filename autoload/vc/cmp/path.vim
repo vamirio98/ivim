@@ -22,7 +22,8 @@ export def Completor(findstart: number, base: string): any
     if findstart
         var line = getline('.')->strpart(0, col('.') - 1)
         var prefix = line->matchstr('\f\+$')
-        if prefix->empty() || !prefix->path.IsPath()
+        var p = path.Path.new(prefix)
+        if prefix->empty() || p.IsUnc() || p.IsProtocol()
             return -2
         endif
         # to inclue the leading '.'
@@ -32,7 +33,7 @@ export def Completor(findstart: number, base: string): any
     var cItems = []
     var dirChanged: bool = false
     try
-        if options.bufRelPath && base =~ ('^\v\.\.?' .. path.sepPattern) &&
+        if options.bufRelPath && base =~ ('^\v\.\.?' .. path.sepPat) &&
                 !bufInCwd
             # not already in buffer dir, change directory to get
             # completions for paths relative to current buffer dir
@@ -59,7 +60,7 @@ export def Completor(findstart: number, base: string): any
             endif
             cItems->add({
                 word: cItem,
-                abbr: cItem->path.Basename() .. (isDir && options.showPathSepAtEnd ? '/' : ''),
+                abbr: cItem->path.Name() .. (isDir && options.showPathSepAtEnd ? '/' : ''),
                 kind: util.GetItemKindValue(isDir ? 'Folder' : 'File'),
                 kind_hlgroup: util.GetKindHighlightGroup(isDir ? 'Folder' : 'File'),
             })
@@ -76,16 +77,16 @@ export def Completor(findstart: number, base: string): any
 enddef
 
 def UpdateCwd(): void
-    cwd = path.Abspath('.')
-    bufInCwd = path.Equal(cwd, bufDir)
+    cwd = path.Resolve('.')
+    bufInCwd = path.IsSamefile(cwd, bufDir)
 enddef
 
 def UpdateBufDir(): void
-    bufDir = path.Abspath('%')
+    bufDir = path.Resolve('%')
     if !path.IsDir(bufDir)
-        bufDir = path.Dirname(bufDir)
+        bufDir = path.Parent(bufDir)
     endif
-    bufInCwd = path.Equal(cwd, bufDir)
+    bufInCwd = path.IsSamefile(cwd, bufDir)
 enddef
 
 UpdateCwd()
