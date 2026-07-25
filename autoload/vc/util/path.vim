@@ -249,6 +249,8 @@ export class Path
     def Anchor(): Path
         if this.IsProtocol()
             return Path.new()
+        elseif this.posix =~ '\v^\a:/' || this.IsUnc()
+            return Path.new(this.Drive().posix .. '/')
         else
             return this._JoinTwoPath(this.Drive(), this.Root())
         endif
@@ -293,9 +295,9 @@ export class Path
     enddef
 
     def Name(): string
-        var anchor: string = this.Anchor().posix
-        var pos = this.posix[anchor->len() :]->strridx('/')
-        return pos < 0 ? '' : this.posix[anchor->len() :][pos + 1 :]
+        var anchorLen: number = this.Anchor().posix->len()
+        var pos = this.posix[anchorLen :]->strridx('/')
+        return this.posix[anchorLen :][pos < 0 ? 0 : pos + 1 :]
     enddef
 
     def Suffix(): string
@@ -380,7 +382,8 @@ export class Path
         if !this.IsDir()
             throw $'{this.path} is not a directory'
         endif
-        return readdir(this.posix)->map((_, v) => Path.new(this.path .. '/' .. v))
+        return readdir(this.posix)
+            ->map((_, v) => Path.new(this.path).Joinpath(v))
     enddef
 
     def IsSamefile(other: any): bool
@@ -392,7 +395,7 @@ export class Path
         return this.Resolve().posix->mkdir(flags, mode)
     enddef
 
-    def Unlink(): void
+    def Unlink(): number
         if this.IsDir()
             return this.Rmdir()
         endif
@@ -569,9 +572,9 @@ if 0
             P('ab://abc////').IsProtocol()->Assert() &&
             (!P('ab:://ab').IsProtocol())->Assert() &&
             (windows == !P('/a').IsAbsolute())->Assert() &&
-            P('a:/b').IsAbsolute()->Assert() &&
-            P('a:').IsAbsolute()->Assert() &&
-            P('a://').IsAbsolute()->Assert() &&
+            (windows == P('a:/b').IsAbsolute())->Assert() &&
+            (windows == P('a:').IsAbsolute())->Assert() &&
+            (windows == P('a://').IsAbsolute())->Assert() &&
             (!P('//').IsAbsolute())->Assert() &&
             P('./').IsRelative()->Assert() &&
             P('../').IsRelative()->Assert() &&
@@ -587,7 +590,7 @@ if 0
         # echo P('c:/').WithStem('a')
         return P('/a/b///').Resolve().Native()
             ->MdEqual('/a/b'->fnamemodify(':p')) &&
-            P('a/b/c').Native()->MdEqual('.\a\b\c') &&
+            P('a/b/c').Native()->MdEqual(windows ? '.\a\b\c' : './a/b/c') &&
             P('/a/b').Contains('/a/b/c')->Assert() &&
             (!P('/a/b').Contains('/a'))->Assert() &&
             P('/etc/passwd').RelativeTo('/')->string()->MdEqual('etc/passwd') &&

@@ -101,9 +101,9 @@ if has_key(plug, 'editor')
     Plug 'skywind3000/asynctasks.vim'
     LoadConf site/plug/asynctasks.vim
 
-    # Plug 'junegunn/fzf'
-    # Plug 'junegunn/fzf.vim'
-    # LoadConf site/plug/fzf.vim
+    Plug 'junegunn/fzf'
+    Plug 'junegunn/fzf.vim'
+    LoadConf site/plug/fzf.vim
 
     Plug 'Yggdroot/LeaderF', { 'do': ':LeaderfInstallCExtension' }
     Plug 'Yggdroot/LeaderF-marks'

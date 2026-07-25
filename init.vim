@@ -39,18 +39,19 @@ exec 'set rtp+=' .. fnameescape(home)
 set rtp+=~/.vim
 
 # check for depend
-const DEPENDENCY: list<string> = ['rg', 'fd']
-for dep in DEPENDENCY
+const kDependency: list<string> = ['rg', 'fd']
+for dep in kDependency
     if !executable(dep)
         notify.Error($'no [{dep}] be found in $PATH, some plugins may broken')
     endif
 endfor
 
-IncScript config/options.vim
-IncScript config/ignores.vim
-IncScript config/plug.vim
-IncScript config/keymaps.vim
-IncScript config/autocmds.vim
+IncScript core/options.vim
+IncScript core/ignores.vim
+IncScript core/plug.vim
+IncScript core/keymap/basic.vim
+IncScript core/keymaps.vim
+IncScript core/autocmds.vim
 
 doautocmd <nomodeline> User VcLoadPost
 

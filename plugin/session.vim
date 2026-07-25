@@ -1,5 +1,9 @@
 vim9script
 
+if !get(g:, 'vcSessionEnable', 1)
+    finish
+endif
+
 if exists('g:isession_loaded')
   finish
 endif
