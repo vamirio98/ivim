@@ -46,7 +46,9 @@ for dep in kDependency
     endif
 endfor
 
-IncScript core/options.vim
+# IncScript core/options.vim
+IncScript core/opts/basic.vim
+IncScript core/opts/copy.vim
 IncScript core/ignores.vim
 IncScript core/plug.vim
 IncScript core/keymap/basic.vim

@@ -49,34 +49,6 @@ set autowrite
 
 set viewoptions=cursor,curdir,folds,slash,unix
 
-if has('clipboard')
-    set clipboard^=unnamed,unnamedplus
-endif
-if (!empty($SSH_TTY) || os.IsWsl())
-    # let vim clipboard sync with system
-    # from https://www.zhihu.com/tardis/zm/ans/2156080913?source_id=1003
-    def RawEcho(str: string)
-        if filewritable('/dev/fd/2')
-            writefile([str], '/dev/fd/2', 'b')
-        else
-            exec "silent! !echo" shellescape(str)
-            redraw!
-        endif
-    enddef
-
-    def Copy(): void
-        var c: string = join(v:event.regcontents, "\n")
-        var c64: string = system("base64", c)
-        var s: string = "\e]52;c;" .. trim(c64) .. "\x07"
-        RawEcho(s)
-    enddef
-
-    augroup VcConfigOptionsSystemClipboard
-        au!
-        au TextYankPost * Copy()
-    augroup END
-endif
-
 set completeopt=menu,menuone,noselect
 set confirm # confirm to save changes before exiting modified buffer
 set formatoptions=jcroqlnt # tcqj
@@ -154,10 +126,6 @@ set foldlevel=99
 set smoothscroll
 set foldmethod=marker
 set foldtext=foldtext()
-
-# set <leader> key.
-g:mapleader = ' '
-g:maplocalleader = '\'
 
 # https://stackoverflow.com/a/21026618
 # see :h 'directory'

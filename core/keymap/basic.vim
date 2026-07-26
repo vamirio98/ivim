@@ -2,6 +2,10 @@ vim9script
 
 # should not depend on anything
 
+# set <leader> key.
+g:mapleader = ' '
+g:maplocalleader = '\'
+
 # {{{ make sure function work normally
 # set Alt and function key in terminal
 
