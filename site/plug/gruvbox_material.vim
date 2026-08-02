@@ -26,6 +26,18 @@ if has('termguicolors')
   set termguicolors
 endif
 
+Plug 'sainnhe/gruvbox-material'
+
+augroup VcSitePlugGruvboxMaterial
+    au!
+    au VimEnter * Setup()
+augroup END
+
+def Setup(): void
+    UpdateTheme()
+    colorscheme gruvbox-material
+enddef
+
 # {{{ update colortheme for lightline
 def UpdateTheme()
   if plug.Has('lightline.vim')
@@ -45,7 +57,4 @@ def UpdateTheme()
     endif
   endif
 enddef
-UpdateTheme()
 # }}}
-
-colorscheme gruvbox-material

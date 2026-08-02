@@ -1,14 +1,13 @@
 vim9script
 
-import autoload "./os.vim"
-import autoload "./path.vim"
+import autoload "./path.vim" as mPath
 
 
 #----------------------------------------------------------------------
 # guess root
 #----------------------------------------------------------------------
 def GuessRoot(filename: string, markers: list<string>): string
-    var fullname: string = path.Abspath(filename)
+    var fullname: string = mPath.Resolve(filename)
     var pivot: string = fullname
     if !isdirectory(pivot)
         pivot = fnamemodify(pivot, ':h')
@@ -16,12 +15,12 @@ def GuessRoot(filename: string, markers: list<string>): string
     while true
         var prev: string = pivot
         for marker in markers
-            var newname: string = path.Join(pivot, marker)
+            var newname: string = mPath.Joinpath(pivot, marker)
             if newname =~ '\v(\*|\?|\[|\])'
                 if !glob(newname)->empty()
                     return pivot
                 endif
-            elseif path.Exists(newname)
+            elseif mPath.Exists(newname)
                 return pivot
             endif
         endfor
@@ -65,10 +64,10 @@ def FindRoot(name: any, markers: list<string> = null_list,
         endif
         if getbufvar(buf, '&buftype') != null_string
             fpath = getcwd()
-            return path.Abspath(fpath)
+            return mPath.Resolve(fpath)
         endif
     elseif name == '%'
-        fpath = path.Abspath(name)
+        fpath = mPath.Resolve(name)
         if exists('b:vc_root') && b:vc_root != null
             return b:vc_root
         elseif exists('t:vc_root') && t:vc_root != null
@@ -82,17 +81,17 @@ def FindRoot(name: any, markers: list<string> = null_list,
             endif
         endif
     else
-        fpath = path.Abspath(name)
+        fpath = mPath.Resolve(name)
     endif
 
     try
-        return GuessRoot(fpath, markers)->path.Abspath()
+        return GuessRoot(fpath, markers)->mPath.Resolve()
     catch
         if strict
             throw v:exception
         endif
         # Not found: return parent directory of current file / directory itself.
-        var fullname: string = path.Abspath(fpath)
+        var fullname: string = mPath.Resolve(fpath)
         if isdirectory(fullname)
             return fullname
         endif
@@ -122,6 +121,6 @@ enddef
 #----------------------------------------------------------------------
 # current root
 #----------------------------------------------------------------------
-export def CurRoot(): string
+export def Root(): string
     return GetRoot('%')
 enddef

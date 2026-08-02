@@ -1,6 +1,8 @@
 vim9script
 
-augroup vc_site_plug_strip_trailing_whitespace
+Plug 'vamirio98/vim-strip-trailing-whitespace'
+
+augroup VcSitePlugStripTrailingWhitespace
   au!
   au FileType dirvish b:strip_trailing_whitespace_enabled = 0
   au BufAdd * if &bt == 'popup'

@@ -3,6 +3,11 @@ vim9script
 import autoload "vc/util/keymap.vim"
 import autoload "vc/util/notify.vim"
 import autoload "vc/util/plug.vim"
+import autoload 'vc/tui/highlight.vim' as mHl
+
+
+Plug 'itchyny/lightline.vim'
+Plug 'mengelbrecht/lightline-bufferline'
 
 # {{{ setting
 set noshowmode
@@ -36,7 +41,7 @@ g:lightline.active = {
     [ 'gitbranch',
       # 'coc_error', 'coc_warn', 'lspdiag',
       # 'linter_checking', 'linter_errors', 'linter_warnings', 'linter_infos',
-      'vc_filename', 'modified',
+      'vcFilename', 'modified',
     ],
   ],
   'right': [ ['lineinfo'], ['percent'],
@@ -49,7 +54,7 @@ g:lightline.tabline = {
 }
 
 g:lightline.component_function = {
-  'vc_filename': 'g:VcFilename',
+  'vcFilename': 'g:VcFilename',
 }
 g:lightline.component_expand = {
   'buffers': 'lightline#bufferline#buffers',
@@ -104,18 +109,6 @@ def SetupColor()
     g:lightline.colorscheme))
   palette.tabline.right = palette.tabline.left
 enddef
-
-def NewHighlight(name: string, bg: string, fg: string): void
-  var nbg: dict<any> = hlget(bg, 1)[0]
-  var nfg: dict<any> = hlget(fg, 1)[0]
-  exec printf('hi! %s ctermbg=%s ctermfg=%s guibg=%s guifg=%s',
-    name, nbg.ctermbg, nfg.ctermfg, nbg.guibg, nfg.guifg)
-enddef
-def NewColor(bg: string, fg: string): list<string>
-  var nbg: dict<any> = hlget(bg, 1)[0]
-  var nfg: dict<any> = hlget(fg, 1)[0]
-  return [ nfg.guifg, nbg.guibg, nfg.ctermfg, nbg.ctermbg ]
-enddef
 # }}}
 
 # tags {{{ #
@@ -146,26 +139,26 @@ enddef
 
 # {{{ git summary
 def SetupStlGitSumColor(): void
-  NewHighlight('VcStlGitSumAdd', 'VcStlX', 'GitGutterAdd')
-  NewHighlight('VcStlGitSumChange', 'VcStlX', 'GitGutterChange')
-  NewHighlight('VcStlGitSumDelete', 'VcStlX', 'GitGutterDelete')
+    'VcStlGitSumAdd'->mHl.Combine('GitGutterAdd', 'VcStlX')
+    'VcStlGitSumChange'->mHl.Combine('GitGutterChange', 'VcStlX')
+    'VcStlGitSumDelete'->mHl.Combine('GitGutterDelete', 'VcStlX')
 enddef
 
 def g:VcStlGitSummary(): string
-  var [a, m, r] = g:GitGutterGetHunkSummary()
-  return printf('%s%s%s%s%s',
-    (a == 0 ? '' : printf('%%#VcStlGitSumAdd#+%%(%d%%)%%*', a)),
-    (m + r > 0 ? ' ' : ''),
-    (m == 0 ? '' : printf('%%#VcStlGitSumChange#~%%(%d%%)%%*', m)),
-    (m > 0 && r > 0 ? ' ' : ''),
-    (r == 0 ? '' : printf('%%#VcStlGitSumDelete#-%%(%d%%)%%*', r))
-  )
+    var [a, m, r] = g:GitGutterGetHunkSummary()
+    return printf('%s%s%s%s%s',
+        (a == 0 ? '' : printf('%%#VcStlGitSumAdd#+%%(%d%%)%%*', a)),
+        (m + r > 0 ? ' ' : ''),
+        (m == 0 ? '' : printf('%%#VcStlGitSumChange#~%%(%d%%)%%*', m)),
+        (m > 0 && r > 0 ? ' ' : ''),
+        (r == 0 ? '' : printf('%%#VcStlGitSumDelete#-%%(%d%%)%%*', r))
+    )
 enddef
 # }}}
 
 # {{{ git branch
 def SetupStlGitBranchColor(): void
-  NewHighlight('VcStlGitBranch', 'VcStlB', 'Blue')
+    'VcStlGitBranch'->mHl.Combine('Blue', 'VcStlB')
 enddef
 def g:VcStlGitBranch(): string
   if &ft == 'dirvish'
@@ -180,8 +173,8 @@ enddef
 
 # {{{ lsp diag
 def SetupStlLspDiagColor(): void
-  NewHighlight('VcStlLspDiagError', 'VcStlB', 'Red')
-  NewHighlight('VcStlLspDiagWarn', 'VcStlB', 'Yellow')
+    'VcStlLspDiagError'->mHl.Combine('Red', 'VcStlB')
+    'VcStlLspDiagWarn'->mHl.Combine('Yellow', 'VcStlB')
 enddef
 def g:VcStlLspDiag(): string
   if plug.Has('YouCompleteMe')
@@ -244,16 +237,16 @@ augroup vc_site_plug_lightline
   au!
   # wait for colorscheme loaded
   au VimEnter * SetupColor()
-  if plug.Has('coc.nvim')
-    au User CocStatusChange lightline#update()
-  endif
-  if plug.Has('YouCompleteMe')
-    au CursorHold * lightline#update()
-  endif
-  if plug.Has('vim-gutentags')
-    au User GutentagsUpdating lightline#update()
-    au User GutentagsUpdated lightline#update()
-  endif
+  # if plug.Has('coc.nvim')
+  #   au User CocStatusChange lightline#update()
+  # endif
+  # if plug.Has('YouCompleteMe')
+  #   au CursorHold * lightline#update()
+  # endif
+  # if plug.Has('vim-gutentags')
+  #   au User GutentagsUpdating lightline#update()
+  #   au User GutentagsUpdated lightline#update()
+  # endif
   au FileType dirvish lightline#update()
   au User GitGutter lightline#update()
 

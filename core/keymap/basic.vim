@@ -3,8 +3,8 @@ vim9script
 # should not depend on anything
 
 # set <leader> key.
-g:mapleader = ' '
-g:maplocalleader = '\'
+g:mapleader = '\'
+g:maplocalleader = "\<tab>"
 
 # {{{ make sure function work normally
 # set Alt and function key in terminal
@@ -99,5 +99,104 @@ nnoremap <M-l> <C-w>l
 # terminal
 if has('terminal') && exists(':terminal') == 2 && has('patch-8.1.1')
     set termwinkey=<C-_>
-    tnoremap <esc><esc> <C-\><C-n>
+    tnoremap <M-q> <C-\><C-n>
 endif
+
+# resize window {{{
+# increase window height
+nnoremap <C-up> <Cmd>resize +2<CR>
+# decrease window height
+nnoremap <C-down> <Cmd>resize -2<CR>
+# decrease window width
+nnoremap <C-left> <Cmd>vertical resize -2<CR>
+# increase window width
+nnoremap <C-right> <Cmd>vertical resize +2<CR>
+# }}}
+
+# move lines {{{
+# move down
+nnoremap <M-J> <Cmd>exec 'move .+'.v:count1<CR>==
+# move up
+nnoremap <M-K> <Cmd>exec 'move .-'.(v:count1 + 1)<CR>==
+
+inoremap <M-J> <Esc><Cmd>m .+1<CR>==gi
+inoremap <M-K> <Esc><Cmd>m .-2<CR>==gi
+vnoremap <M-J> :<C-u>exec "'<,'>move '>+".v:count1<CR>gv=gv
+vnoremap <M-K> :<C-u>exec "'<,'>move '<-".(v:count1 + 1)<CR>gv=gv
+# }}}
+
+# buffers {{{ #
+# prev buffer
+nnoremap <S-h> <Cmd>bprevious<CR>
+# next buffer
+nnoremap <S-l> <Cmd>bnext<CR>
+
+nnoremap [b <Cmd>bprevious<CR>
+nnoremap ]b <Cmd>bnext<CR>
+# }}} buffers #
+
+# next search result {{{
+# https://github.com/mhinz/vim-galore#saner-behavior-of-n-and-n
+nnoremap <expr> n 'Nn'[v:searchforward] .. 'zv'
+xnoremap <expr> n 'Nn'[v:searchforward]
+onoremap <expr> n 'Nn'[v:searchforward]
+nnoremap <expr> N 'nN'[v:searchforward] .. 'zv'
+xnoremap <expr> N 'nN'[v:searchforward]
+onoremap <expr> N 'nN'[v:searchforward]
+# }}}
+
+# save file
+nnoremap <C-s> <Cmd>update<CR>
+inoremap <C-s> <Cmd>update<CR>
+
+# keywordprg
+nnoremap <space>K <Cmd>norm! K<CR>
+
+# better indenting
+vnoremap < <gv
+vnoremap > >gv
+
+# add undo break-points
+inoremap , ,<C-g>u
+inoremap . .<C-g>u
+inoremap ; ;<C-g>u
+
+# previous quickfix
+nnoremap [q <Cmd>cprev<CR>
+# next quickfix
+nnoremap ]q <Cmd>cnext<CR>
+
+nnoremap Q <Cmd>qa<CR>
+
+# {{{ scroll popup window
+# https://vi.stackexchange.com/a/21927
+nnoremap <expr> <C-F> <SID>ScrollCursorPopup(true) ? '<esc>' : '<C-F>'
+nnoremap <expr> <C-B> <SID>ScrollCursorPopup(false) ? '<esc>' : '<C-B>'
+def FindCursorPopup(radius: number = 2): number
+    var srow: number = screenrow()
+    var scol: number = screencol()
+
+    # it's necessary to test entire rect, as some popup might be quite small
+    for r in range(srow - radius, srow + radius)
+        for c in range(scol - radius, scol + radius)
+            var winid: number = popup_locate(r, c)
+            if winid != 0
+                return winid
+            endif
+        endfor
+    endfor
+
+    return 0
+enddef
+
+def ScrollCursorPopup(down: bool): bool
+    var winid: number = FindCursorPopup()
+    if winid == 0
+        return false
+    endif
+
+    var pp = popup_getpos(winid)
+    popup_setoptions( winid, {'firstline': pp.firstline + ( down ? 4 : -4 ) } )
+    return true
+enddef
+# }}}

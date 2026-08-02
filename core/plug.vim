@@ -1,6 +1,6 @@
 vim9script
 
-import autoload "vc/util/notify.vim"
+import autoload 'vc/util/plug.vim' as mPlug
 
 # download plug.vim if it doesn't exist yet
 if empty(glob(expand('~/.vim/autoload/plug.vim')))
@@ -9,16 +9,16 @@ if empty(glob(expand('~/.vim/autoload/plug.vim')))
 endif
 
 # run PlugInstall if there are missing plugins
-augroup VcConfigPlugAutoInstall
+augroup VcCorePlugAutoInstall
   au!
-  au VimEnter * if len(filter(values(g:plugs), '!isdirectory(v:val.dir)')) > 0
-              \ | PlugInstall --sync | source $MYVIMRC
+  au VimEnter * if g:plugs->values()->filter('!isdirectory(v:val.dir)')
+              \ ->len() > 0
+              \ | PlugInstall --sync
               \ | endif
 augroup END
 
 if !exists('g:vc_plug')
     g:vc_plug = [
-        'coding',
         'debug',
         'editor',
         'ui',
@@ -47,116 +47,61 @@ plug#begin(plugHome)
 #--------------------------------------------------------------
 # coding
 #--------------------------------------------------------------
-# {{{ coding
-if has_key(plug, 'coding')
-    Plug 'LunarWatcher/auto-pairs'
-    LoadConf site/plug/auto_pairs.vim
+IncScript site/plug/auto_pairs.vim
+IncScript site/plug/strip_trailing_whitespace.vim
+IncScript site/plug/matchup.vim
+IncScript site/plug/ultisnips.vim
+IncScript site/plug/lsp.vim
 
-    Plug 'vamirio98/vim-strip-trailing-whitespace'
-    LoadConf site/plug/strip_trailing_whitespace.vim
 
-    Plug 'andymass/vim-matchup'
-    LoadConf site/plug/match_up.vim
+#---------------------------------------------------------------
+# debug
+#---------------------------------------------------------------
+IncScript site/plug/vimspector.vim
 
-    if has('python3')
-        Plug 'SirVer/ultisnips'
-        Plug 'honza/vim-snippets'
-        LoadConf site/plug/ultisnips.vim
-    else
-        notify.Error("no python3 support")
-    endif
 
-    Plug 'yegappan/lsp'
-    LoadConf site/plug/lsp.vim
-endif
-# }}}
+IncScript site/plug/stargate.vim
+Plug 'kshenoy/vim-signature'
+IncScript site/plug/which_key.vim
+IncScript site/plug/floaterm.vim
+# TODO: use myself terminal manager
 
-if has_key(plug, 'debug')
-    Plug 'puremourning/vimspector'
-    LoadConf site/plug/vimspector.vim
-endif
+IncScript site/plug/git.vim
+IncScript site/plug/dirvish.vim
 
-# {{{ editor
-if has_key(plug, 'editor')
-    Plug 'monkoose/vim9-stargate'
-    LoadConf site/plug/easy_motion.vim
+IncScript site/plug/asynctasks.vim
 
-    Plug 'kshenoy/vim-signature'
+IncScript site/plug/fzf.vim
 
-    Plug 'liuchengxu/vim-which-key'
-    LoadConf site/plug/which_key.vim
+# Plug 'Yggdroot/LeaderF', { 'do': ':LeaderfInstallCExtension' }
+# Plug 'Yggdroot/LeaderF-marks'
+# Plug 'FahimAnayet/LeaderF-map'
+# LoadConf site/plug/leaderf.vim
 
-    Plug 'voldikss/vim-floaterm'
-    LoadConf site/plug/floaterm.vim
-    # TODO: use myself terminal manager
+# text opeartor
+Plug 'tpope/vim-surround'
+Plug 'tpope/vim-commentary'
+Plug 'tpope/vim-endwise'
+Plug 'tpope/vim-speeddating'
+Plug 'tpope/vim-unimpaired'
 
-    Plug 'tpope/vim-fugitive'
-    Plug 'airblade/vim-gitgutter'
-    LoadConf site/plug/git.vim
+IncScript site/plug/yoink.vim
 
-    Plug 'justinmk/vim-dirvish'
-    LoadConf site/plug/dirvish.vim
+# Plug 'ludovicchabant/vim-gutentags'
+# Plug 'skywind3000/gutentags_plus'
+# LoadConf site/plug/tags.vim
 
-    Plug 'skywind3000/asyncrun.vim'
-    Plug 'skywind3000/asynctasks.vim'
-    LoadConf site/plug/asynctasks.vim
+IncScript site/plug/gruvbox_material.vim
+Plug 'ryanoasis/vim-devicons'
+IncScript site/plug/rainbow.vim
+Plug 'bfrg/vim-cpp-modern'
+IncScript site/plug/indent_guides.vim
+IncScript site/plug/lightline.vim
 
-    Plug 'junegunn/fzf'
-    Plug 'junegunn/fzf.vim'
-    LoadConf site/plug/fzf.vim
+Plug 'azabiong/vim-highlighter'
+Plug 'chrisbra/Colorizer'
 
-    Plug 'Yggdroot/LeaderF', { 'do': ':LeaderfInstallCExtension' }
-    Plug 'Yggdroot/LeaderF-marks'
-    Plug 'FahimAnayet/LeaderF-map'
-    LoadConf site/plug/leaderf.vim
-
-    # text opeartor
-    Plug 'tpope/vim-surround'
-    Plug 'tpope/vim-commentary'
-    Plug 'tpope/vim-endwise'
-    Plug 'tpope/vim-speeddating'
-    Plug 'tpope/vim-unimpaired'
-    Plug 'svermeulen/vim-yoink'
-    LoadConf site/plug/yoink.vim
-endif
-# }}}
-
-if has_key(plug, 'tags')
-    Plug 'ludovicchabant/vim-gutentags'
-    Plug 'skywind3000/gutentags_plus'
-    LoadConf site/plug/tags.vim
-endif
-
-# {{{ ui
-if has_key(plug, 'ui')
-    Plug 'sainnhe/gruvbox-material'
-    LoadConf site/plug/gruvbox_material.vim
-
-    Plug 'ryanoasis/vim-devicons'
-
-    Plug 'luochen1990/rainbow'
-    LoadConf site/plug/rainbow.vim
-    Plug 'bfrg/vim-cpp-modern'
-    Plug 'preservim/vim-indent-guides'
-    LoadConf site/plug/indent_guides.vim
-
-    Plug 'itchyny/lightline.vim'
-    Plug 'mengelbrecht/lightline-bufferline'
-    LoadConf site/plug/lightline.vim
-
-    Plug 'machakann/vim-highlightedyank'
-    LoadConf site/plug/highlightedyank.vim
-
-    Plug 'azabiong/vim-highlighter'
-    Plug 'chrisbra/Colorizer'
-endif
-# }}}
-
-# {{{
-if has_key(plug, 'utils')
-    Plug 'dstein64/vim-startuptime'
-endif
-# }}}
+Plug 'dstein64/vim-startuptime'
 
 # initialize plugin system
 plug#end()

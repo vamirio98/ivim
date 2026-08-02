@@ -1,12 +1,14 @@
 vim9script
 
-noremap <localleader>f <Cmd>call stargate#OKvim(1)<CR>
-noremap <localleader>F <Cmd>call stargate#OKvim(2)<CR>
+noremap <leader>f <Cmd>call stargate#OKvim(1)<CR>
+noremap <leader>F <Cmd>call stargate#OKvim(2)<CR>
 
 g:stargate_name = 'Master'
 
+Plug 'monkoose/vim9-stargate'
+
 # set highlight after plugin load finishing to avoid color miss
-augroup vc_site_plug_easy_motion
+augroup VcSitePlugStargate
   au!
   au VimEnter * hi! link StargateFocus Comment
   au VimEnter * hi! link StargateDesaturate Comment

@@ -1,10 +1,11 @@
 vim9script
 
-import autoload 'vc/util/notify.vim'
+import autoload 'vc/util/notify.vim' as mNotify
+
 
 # auto load change.
 set autoread
-augroup VcConfigAutocmdsAutoReload
+augroup VcCoreAutocmdsExtendAutoRead
     au!
     # trigger autoread when cursor stop moving, buffer change or terminal focus
     au CursorHold,CursorHoldI,BufEnter,FocusGained *
@@ -12,7 +13,7 @@ augroup VcConfigAutocmdsAutoReload
                 \ | checktime | endif
     # notification after file change
     au FileChangedShellPost *
-                \ notify.Warn('File changed on disk. Buffer reloaded.')
+                \ mNotify.Warn('File changed on disk. Buffer reloaded.')
 augroup END
 
 
@@ -22,14 +23,14 @@ def ResizeSplits(): void
     tabdo wincmd =
     exec $'tabnext {curTab}'
 enddef
-augroup VcConfigAutocmdsResizeSplits
+augroup VcCoreAutocmdsExtendResizeSplits
     au!
     au VimResized * ResizeSplits()
 augroup END
 
 
 # go to last loc when opening a buffer
-augroup VcConfigAutocmdsLastLoc
+augroup VcCoreAutocmdsExtendLastLoc
     au!
     au BufReadPost * if line("'\"") > 0 && line("'\"") <= line("$")
                 \ && &filetype != "gitcommit"
@@ -38,35 +39,8 @@ augroup VcConfigAutocmdsLastLoc
 augroup END
 
 
-# close some filetypes with <q>
-def Close(): void
-    var bnr: number = bufnr('%')
-    close
-    exec $'bwipeout! {bnr}'
-enddef
-def CloseWithQ(): void
-  setlocal nobuflisted
-  nnoremap <buffer> q <ScriptCmd>call Close()<cr>
-enddef
-augroup VcConfigAutocmdsCloseWithQ
-    au!
-    # do NOT add any space between two filetype
-    au FileType help,qf,PlenaryTestPopup,checkhealth,dbout,gitsigns-blame,
-                \grug-far,lspinfo,neotest-output,neotest-output-panel,
-                \neotest-summary,notify,spectre_panel,startuptime,tsplayground
-                \ CloseWithQ()
-augroup END
-
-
-# make it easier to close man-files when opened inline
-augroup VcConfigAutocmdsManUnlisted
-    au!
-    au FileType man setlocal nobuflisted
-augroup END
-
-
 # wrap and check for spell in text filetypes
-augroup VcConfigAutocmdsWrapSpell
+augroup VcCoreAutocmdsExtendWrapSpell
     au!
     au FileType text,gitcommit,markdown,plaintex,typst
                 \ setlocal nowrap | setlocal spell
@@ -74,7 +48,7 @@ augroup END
 
 
 # fix conceallevel for json files
-augroup VcConfigAutocmdsJsonConceal
+augroup VcCoreAutocmdsExtendJsonConceal
     au!
     au FileType json,jsonc,json5 setlocal conceallevel=0
 augroup END
@@ -93,11 +67,39 @@ def Mkdirp(): void
         if exists('*mkdir')
             mkdir(d, 'p')
         else
-            notify.Warn('no mkdir()')
+            mNotify.Warn('no mkdir()')
         endif
     endif
 enddef
-augroup VcConfigAutocmdsAutoCreateDir
+augroup VcCoreAutocmdsExtendAutoCreateDir
     au!
     au BufWritePre * Mkdirp()
+augroup END
+
+
+# close some filetypes with <q>
+def Clear(): void
+    var bnr: number = bufnr('%')
+    close
+    exec $'bwipeout! {bnr}'
+enddef
+def ClearWithQ(): void
+  setlocal nobuflisted
+  nnoremap <buffer> q <ScriptCmd>call Clear()<cr>
+enddef
+
+augroup VcCoreAutocmdsExtendClearWithQ
+    au!
+    # do NOT add any space between two filetype
+    au FileType help,qf,PlenaryTestPopup,checkhealth,dbout,gitsigns-blame,
+                \grug-far,lspinfo,neotest-output,neotest-output-panel,
+                \neotest-summary,notify,spectre_panel,startuptime,tsplayground
+                \ ClearWithQ()
+augroup END
+
+
+# make it easier to close man-files when opened inline
+augroup VcCoreAutocmdsExtendManUnlisted
+    au!
+    au FileType man setlocal nobuflisted
 augroup END

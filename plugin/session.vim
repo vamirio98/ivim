@@ -60,7 +60,7 @@ def g:SessionSave(bang: bool = false, name: string = null_string,
   var new_name: string = name
   if new_name == null
     new_name = interact.Input('Session name: ',
-      fnamemodify(project.CurRoot(), ':t'), 'customlist,g:SessionList'
+      fnamemodify(project.Root(), ':t'), 'customlist,g:SessionList'
     )
   endif
   if empty(new_name)
@@ -167,7 +167,7 @@ command! -nargs=? -bar -bang -complete=customlist,g:SessionList
 command! -nargs=? -bar -bang -complete=customlist,g:SessionList
       \ VcSessionDelete g:SessionDelete(<bang>0, <f-args>)
 command! -nargs=0 -bar VcSessionClose g:SessionClose()
-command! -nargs=0 VcRoot notify.Info(project.CurRoot())
+command! -nargs=0 VcRoot notify.Info(project.Root())
 
 augroup vc_plugin_session
   au!
@@ -175,6 +175,19 @@ augroup vc_plugin_session
         \ exists('v:this_session') && filewritable(v:this_session)
     | WriteSessionFile(fnameescape(v:this_session)) | endif
 augroup END
+
+# fzf integration {{{ #
+if plug.Has('fzf')
+    def SearchProj(): void
+        var projs: list<string> = g:SessionList('')
+        fzf#run(fzf#wrap({
+            source: projs, sink: (line) => g:SessionLoad(0, line)
+        }))
+    enddef
+
+    nnoremap <space>sp <scriptcmd>SearchProj()<cr>
+endif
+# }}} fzf integration #
 
 # {{{ leaderf integration
 if plug.Has('LeaderF')

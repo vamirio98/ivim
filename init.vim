@@ -48,13 +48,14 @@ endfor
 
 # IncScript core/options.vim
 IncScript core/opts/basic.vim
+IncScript core/keymap/basic.vim
 IncScript core/opts/copy.vim
 IncScript core/ignores.vim
 IncScript core/plug.vim
-IncScript core/keymap/basic.vim
-IncScript core/keymaps.vim
-IncScript core/autocmds.vim
+IncScript core/keymap/extend.vim
+IncScript core/autocmds/basic.vim
+IncScript core/autocmds/extend.vim
 
-doautocmd <nomodeline> User VcLoadPost
+# doautocmd <nomodeline> User VcLoadPost
 
 log.Info('finish loading vc')

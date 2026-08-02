@@ -2,35 +2,14 @@ vim9script
 
 import autoload "vc/util/keymap.vim"
 
-var SetGroup: func = keymap.SetGroup
-var SetDesc: func = keymap.SetDesc
-SetGroup('<leader>d', 'debug')
+Plug 'puremourning/vimspector'
 
-nmap <silent> <leader>db <Plug>VimspectorToggleBreakpoint
-SetDesc('<leader>db', 'Toggle Breakpoint')
-nmap <silent> <leader>dB <Plug>VimspectorToggleConditionalBreakpoint
-SetDesc('<leader>dB', 'Toggle Cond Breakpoint')
-
-nmap <silent> <leader>dc <Plug>VimspectorContinue
-SetDesc('<leader>dc', 'Start/Continue')
-
-nmap <silent> <leader>df <Plug>VimspectorAddFunctionBreakpoint
-SetDesc('<leader>df', 'Toggle Func Breakpoint')
-
-nmap <silent> <leader>dp <Plug>VimspectorPause
-SetDesc('<leader>dp', 'Pause Debug')
-
-nmap <silent> <leader>dr <Plug>VimspectorRestart
-SetDesc('<leader>dr', 'Restart')
-
-nmap <silent> <leader>ds <Plug>VimspectorStop
-SetDesc('<leader>ds', 'Stop')
-
-augroup vc_site_plug_vimspector
+augroup VcSitePlugVimspector
   au!
   au User VimSpectorUICreated CustomizeWinBar()
   au User VimSpectorJumpedToFrame OnJumpToFrame()
   au User VimSpectorDebugEnded ++nested OnDebugEnd()
+  au VimEnter * Setup()
 augroup END
 
 # customize UI {{{
@@ -90,7 +69,7 @@ def OnDebugEnd(): void
   var orig_buf: number = bufnr()
   var hidden: bool = &hidden
 
-  augroup vc_site_plug_vimspector_swap_exists
+  augroup VcSitePlugVimspectorSwapExists
     au!
     au SwapExists * v:swapchoice = 'o'
   augroup END
@@ -112,7 +91,33 @@ def OnDebugEnd(): void
     &hidden = hidden
   endtry
 
-  au! vc_site_plug_vimspector_swap_exists
+  au! VcSitePlugVimspectorSwapExists
   s_buffers = {}
 enddef
 # }}}
+
+def Setup()
+    var SetGroup: func = keymap.SetGroup
+    var SetDesc: func = keymap.SetDesc
+    SetGroup('<leader>d', 'debug')
+
+    nmap <silent> <leader>db <Plug>VimspectorToggleBreakpoint
+    SetDesc('<leader>db', 'Toggle Breakpoint')
+    nmap <silent> <leader>dB <Plug>VimspectorToggleConditionalBreakpoint
+    SetDesc('<leader>dB', 'Toggle Cond Breakpoint')
+
+    nmap <silent> <leader>dc <Plug>VimspectorContinue
+    SetDesc('<leader>dc', 'Start/Continue')
+
+    nmap <silent> <leader>df <Plug>VimspectorAddFunctionBreakpoint
+    SetDesc('<leader>df', 'Toggle Func Breakpoint')
+
+    nmap <silent> <leader>dp <Plug>VimspectorPause
+    SetDesc('<leader>dp', 'Pause Debug')
+
+    nmap <silent> <leader>dr <Plug>VimspectorRestart
+    SetDesc('<leader>dr', 'Restart')
+
+    nmap <silent> <leader>ds <Plug>VimspectorStop
+    SetDesc('<leader>ds', 'Stop')
+enddef

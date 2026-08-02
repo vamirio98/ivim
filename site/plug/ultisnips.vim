@@ -4,7 +4,7 @@ vim9script
 # for snippet
 g:UltiSnipsSnippetDirectories = ["UltiSnips"]
 # add site to runtimepath so that UltiSnips can recognize the snippets
-exec printf("set runtimepath+=%s/site", g:vc_home)
+exec $'set runtimepath+={g:vc_home}/site'
 
 g:UltiSnipsEditSplit = "horizontal"
 
@@ -13,3 +13,6 @@ g:UltiSnipsExpandTrigger = "<C-J>"
 g:UltiSnipsJumpForwardTrigger = "<C-J>"
 g:UltiSnipsJumpBackwardTrigger = "<C-K>"
 g:UltiSnipsListSnippets = "<C-X><C-X>"
+
+Plug 'SirVer/ultisnips'
+Plug 'honza/vim-snippets'

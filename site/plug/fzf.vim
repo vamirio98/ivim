@@ -1,71 +1,102 @@
 vim9script
 
-import autoload "vc/util/keymap.vim" as keymap
-import autoload "vc/util/project.vim" as project
+import autoload "vc/util/keymap.vim" as mKeymap
+import autoload "vc/util/project.vim" as mProj
+import autoload 'vc/util/python.vim' as mPython
+import autoload 'vc/util/notify.vim' as mNotify
+import autoload 'vc/util/string.vim' as mString
 
 g:fzf_vim = get(g:, 'fzf_vim', {})
 
-g:fzf_layout = { 'down': '30%' }
+# for color schemes: https://github.com/junegunn/fzf/wiki/Color-schemes
+$FZF_DEFAULT_OPTS = [
+    '--preview-window="border-rounded" --prompt="> "',
+    '--marker=">" --pointer=">" --separator="─" --scrollbar="│"',
+    '--layout="default" --height=20',
+]->join(' ')
+
+g:fzf_layout = { 'down': '50%' }
 # toggle preview window with <Ctrl-/>, show preview window on the right with
 # 50% width, but if the width is smaller than 70 columns, it will show above
 # the candidate list
 g:fzf_vim.preview_window = [ 'right,50%,<70(up,40%)', 'ctrl-/' ]
 
-# {{{ keymaps
-var SetGroup: func = keymap.SetGroup
-var SetDesc: func = keymap.SetDesc
+Plug 'junegunn/fzf'
+Plug 'junegunn/fzf.vim'
 
-SetGroup('<leader>f', 'file')
+augroup VcSitePlugFzf
+    au!
+    au VimEnter * Setup()
+augroup END
 
-def SearchFileInVimcfg(): void
-  exec 'Files' g:vc_home
+def FindVcFiles(): void
+    exec $'Files {g:vc_home}'
 enddef
-def LiveSearchVimcfg(): void
-  exec 'RG .*' g:vc_home
+
+def FindProjFiles(): void
+    var root: string = mProj.Root()
+    exec 'Files' root
 enddef
-nnoremap <leader>fc <ScriptCmd>SearchFileInVimcfg()<CR>
-SetDesc('<leader>fc', 'Search Config File')
-#nnoremap <leader>fC <ScriptCmd>LiveSearchVimcfg()<CR>
-#SetDesc('<leader>fC', 'Live Search Config')
 
-def SearchFileInProject()
-  var root: string = project.CurRoot()
-  exec 'Files' root
+# git {{{ #
+def IsGitRepo(a_dir: string = null_string): bool
+    var dir = a_dir == null ? expand('%:h') : a_dir
+    var res = mPython.System('git rev-parse --is-inside-work-tree', dir)
+    res = res->split("\n")[0]->mString.Strip()
+    return res == 'true'
 enddef
-nnoremap <leader>ff <ScriptCmd>SearchFileInProject()<CR>
-SetDesc('<leader>ff', 'Search File (Project Root)')
-nnoremap <leader>fF <Cmd>Files .<CR>
-SetDesc('<leader>fF', 'Search File (Cwd)')
 
-# TODO: MRU
+def GetCommits(a_dir: string = null_string, reflog: bool = false): list<string>
+    var dir: string = a_dir == null ? mProj.Root() : a_dir
+    if !IsGitRepo(dir)
+        return []
+    endif
 
-# TODO: gtags
+    var cmd = reflog ? 'git reflog' : 'git log --oneline'
+    var res = mPython.System(cmd, dir)
+    return res->split("\n")
+enddef
 
-# {{{ search
-SetGroup('<leader>s', 'search')
+def DoChangeGitDiffBase(line: string): void
+    var hash: string = line->split(' ')[0]
+    g:gitgutter_diff_base = hash
+    mNotify.Info($'Change git diff base to {hash}')
+enddef
 
-nnoremap <leader>sb' <Cmd>Buffers<CR>
-SetDesc('<leader>sb', 'Buffer')
+def ChangeGitDiffBase(): void
+    fzf#run(fzf#wrap({
+        source: GetCommits(), sink: DoChangeGitDiffBase,
+    }))
+enddef
 
-nnoremap <leader>sc <Cmd>History:<CR>
-SetDesc('<leader>sc', 'Command History')
+noremap <space>gb <scriptcmd>ChangeGitDiffBase()<cr>
+# }}} git #
 
-nnoremap <leader>sh <Cmd>Helptags<CR>
-SetDesc('<leader>sh', 'Help Tag')
+def Setup(): void
+# keymap {{{ #
+    var SetGroup: func = mKeymap.SetGroup
+    var SetDesc: func = mKeymap.SetDesc
 
-nnoremap <leader>sj <Cmd>Jumps<CR>
-SetDesc('<leader>sj', 'Jump List')
+    SetGroup('<leader>f', 'file')
+    nnoremap <space>fc <scriptcmd>FindVcFiles()<cr>
+    SetDesc('<space>fc', 'Conf File')
+    nnoremap <space>ff <scriptcmd>FindProjFiles()<cr>
+    SetDesc('<space>ff', 'File (Project Root)')
+    nnoremap <space>fF <cmd>Files .<cr>
+    SetDesc('<space>fF', 'File (Cwd)')
+    nnoremap <space>fr <cmd>History<cr>
+    SetDesc('<space>fr', 'Recent Files')
 
-# TODO: search all keymaps not only normal mode
-nnoremap <leader>sk <Cmd>Maps<CR>
-SetDesc('<leader>sk', 'Keymap')
+    SetGroup('<space>s', 'search')
 
-nnoremap <leader>sm <Cmd>Marks<CR>
-SetDesc('<leader>sm', 'Mark')
-
-nnoremap <leader>st <Cmd>BTags<CR>
-SetDesc('<leader>st', 'Tag (Current File)')
-nnoremap <leader>sT <Cmd>Tags<CR>
-SetDesc('<leader>sT', 'Tag (Workspace)')
-# }}}
-# }}}
+    # TODO: gtags
+    nnoremap <space>sb <cmd>Buffers<cr>
+    nnoremap <space>sc <cmd>Hisotry:<cr>
+    nnoremap <space>sh <cmd>Helptags<cr>
+    nnoremap <space>sj <cmd>Jumps<cr>
+    nnoremap <space>sk <cmd>Maps<cr>
+    nnoremap <space>sm <cmd>Marks<cr>
+    nnoremap <space>st <cmd>BTags<cr>
+    nnoremap <space>sT <cmd>Tags<cr>
+# }}} keymap #
+enddef

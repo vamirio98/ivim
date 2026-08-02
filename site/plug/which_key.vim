@@ -11,3 +11,5 @@ g:which_key_display_names = {
   '<TAB>': '⭲',
   '<CR>': '↵'
 }
+
+Plug 'liuchengxu/vim-which-key'

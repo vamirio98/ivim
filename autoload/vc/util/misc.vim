@@ -1,16 +1,16 @@
 vim9script
 
-import autoload './os.vim'
-import autoload './path.vim'
+import autoload './os.vim' as mOs
+import autoload './path.vim' as mPath
 
-var windows: bool = os.IsWin()
+var windows: bool = mOs.IsWin()
 
 #----------------------------------------------------------------------
 # find files in $PATH
 #----------------------------------------------------------------------
 export def Which(name: string): string
     var sep: string = windows ? ';' : ':'
-    if path.IsAbs(name) && path.IsFile(name)
+    if mPath.IsAbsolute(name) && mPath.IsFile(name)
         return name
     endif
     var ext: list<string> = ['']  # for the filename without externsion
@@ -19,9 +19,9 @@ export def Which(name: string): string
     endif
     for p in split($PATH, sep)
         for fext in ext
-            var fpath: string = path.Join(p, name) .. fext
-            if path.IsFile(fpath)
-                return path.Abspath(fpath)
+            var fpath: string = mPath.Joinpath(p, name) .. fext
+            if mPath.IsFile(fpath)
+                return mPath.Resolve(fpath)
             endif
         endfor
     endfor
@@ -32,6 +32,6 @@ enddef
 #----------------------------------------------------------------------
 # check whether {name} is executable
 #----------------------------------------------------------------------
-export def Executable(name: string): string
+export def Executable(name: string): bool
     return !Which(name)->empty()
 enddef
