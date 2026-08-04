@@ -14,8 +14,7 @@ export def Invoke(a_key: string, mode: string = 'n'): void
     # endif
 
     mData.CreateCache(1)
-    const cache: dict<any> = b:whichKeyCache
-    var root: dict<any> = cache
+    var root: dict<any> = b:whichKeyCache
     if !root->has_key(a_key)
         return
     endif
