@@ -3,6 +3,7 @@ vim9script
 import autoload 'vc/util/interact.vim' as mInteract
 import autoload './char.vim' as mChar
 import autoload './data.vim' as mData
+import autoload './tui.vim' as mTui
 
 
 # Invoke({key} [, {mode}])
@@ -19,6 +20,7 @@ export def Invoke(a_key: string, mode: string = 'n'): void
         return
     endif
     root = root[a_key]
+    mTui.OpenHint(root)
 
     while 1
         var c: string = null_string
@@ -48,3 +50,9 @@ export def Invoke(a_key: string, mode: string = 'n'): void
         endif
     endwhile
 enddef
+
+if 1
+    nnoremap <localleader>l <cmd>echo 'name'<cr>
+    mData.AddDesc('<localleader>l', 'echo name')
+    nnoremap <localleader> <scriptcmd>Invoke(g:maplocalleader)<cr>
+endif

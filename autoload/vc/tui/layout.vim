@@ -2,7 +2,6 @@ vim9script
 
 import autoload './widget.vim' as mw
 import autoload './highlight.vim' as hl
-import autoload './core.vim'
 
 type Widget = mw.Widget
 type BaseWidget = mw.BaseWidget

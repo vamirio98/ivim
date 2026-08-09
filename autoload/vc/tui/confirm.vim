@@ -150,7 +150,10 @@ class Dialog extends VBox
             this.Render()
             redraw
 
-            var ch = interact.Getchar()
+            var ch = interact.Getchar(0)
+            if ch == nr2char(0)
+                continue
+            endif
             # NOTE: popup will handle <C-c>, so it will freeze when press
             # <C-c> until other key press
             if ch == "\<C-c>" || ch == "\<Esc>" || this._quit
