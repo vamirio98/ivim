@@ -2,12 +2,12 @@ vim9script
 
 var msgQueue = []
 
-export def Notify(what: any, color: string = null_string,
+export def Msg(what: any, color: string = null_string,
         keep: bool = false): void
     var msg: string = type(what) == v:t_string ? what :
         (type(what) == v:t_list ? join(what, '\n') : string(what))
     if !v:vim_did_enter
-        msgQueue += [function(Notify, [msg, color, keep])]
+        msgQueue += [function(Msg, [msg, color, keep])]
         return
     endif
 
@@ -18,23 +18,24 @@ export def Notify(what: any, color: string = null_string,
 enddef
 
 export def Error(what: any, keep: bool = true)
-    Notify(what, 'ErrorMsg', keep)
+    Msg(what, 'ErrorMsg', keep)
 enddef
 
 export def Warn(what: any, keep: bool = true)
-    Notify(what, 'WarningMsg', keep)
+    Msg(what, 'WarningMsg', keep)
 enddef
 
 export def Info(what: any, keep: bool = false)
-    Notify(what, 'Identifier', keep)
+    Msg(what, 'Identifier', keep)
 enddef
 
 
 export def Clear(): void
-    echo ''
+    :message clear
 enddef
 
-augroup VcAutoloadUtilNotify
+
+augroup VcAutoloadUtilMsg
     au!
-    au VimEnter * for Msg in msgQueue | Msg() | endfor | msgQueue = []
+    au VimEnter * for F in msgQueue | F() | endfor | msgQueue = []
 augroup END

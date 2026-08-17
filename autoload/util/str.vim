@@ -33,26 +33,10 @@ enddef
 
 
 #----------------------------------------------------------------------
-# string partition
-#----------------------------------------------------------------------
-export def Partition(text: string, sep: string): tuple<string, string, string>
-    var pos = stridx(text, sep)
-    if pos < 0
-        return (text, '', '')
-    else
-        var size = strlen(sep)
-        var head = strpart(text, 0, pos)
-        var tail = strpart(text, pos + size)
-        return (head, sep, tail)
-    endif
-enddef
-
-
-#----------------------------------------------------------------------
 # starts with prefix
 #----------------------------------------------------------------------
 export def Startswith(text: string, prefix: string): bool
-    return (empty(prefix) || (stridx(text, prefix) == 0))
+    return empty(prefix) || stridx(text, prefix) == 0
 enddef
 
 
@@ -66,37 +50,7 @@ export def Endswith(text: string, suffix: string): bool
     if s1 < s2
         return false
     endif
-    return (empty(suffix) || (stridx(text, suffix, ss) == ss))
-enddef
-
-
-#----------------------------------------------------------------------
-# check if text contains part
-#----------------------------------------------------------------------
-export def Contains(text: string, part: string): bool
-    return stridx(text, part) >= 0
-enddef
-
-
-#----------------------------------------------------------------------
-# get range
-# Between({text}, {begin}, {endup} [, {pos}])
-# {begin} The head token
-# {endup} The tail token
-# {pos} Start search from where
-#----------------------------------------------------------------------
-export def Between(text: string, begin: string, endup: string,
-        pos: number = 0): tuple<number, number>
-    var p1 = stridx(text, begin, pos)
-    if p1 < 0
-        return (-1, -1)
-    endif
-    var tmp = p1 + len(begin)
-    var p2 = stridx(text, endup, tmp)
-    if p2 < 0
-        return (-1, -1)
-    endif
-    return (p1, p2)
+    return empty(suffix) || stridx(text, suffix, ss) == ss
 enddef
 
 
@@ -107,9 +61,9 @@ enddef
 export def Matchat(text: string, pat: string,
         pos: number): tuple<number, number, string>
     var start = match(text, pat, 0)
-    while (start >= 0) && (start <= pos)
+    while start >= 0 && start <= pos
         var endup = matchend(text, pat, start)
-        if (start <= pos) && (endup > pos)
+        if start <= pos && endup > pos
             return (start, endup, strpart(text, start, endup - start))
         else
             start = match(text, pat, endup)
@@ -134,6 +88,11 @@ export def List(a_text: any): list<string>
 enddef
 
 
+export def DispLen(text: string): number
+    return strdisplaywidth(text)
+enddef
+
+
 # Testing suit. {{{ #
 if 0
     import autoload './debug.vim'
@@ -154,27 +113,16 @@ if 0
             Equal(Rstrip(s), "\t\t\r\r\n\n  a")
     enddef
 
-    def TestPartition(): bool
-        return Equal(Partition('abcabc', 'ca'), ('ab', 'ca', 'bc'))
-    enddef
-
     def TestSearch(): bool
         var s: string = 'abcabcabc'
         return Assert(s->Startswith('a')) &&
             Assert(!s->Startswith('b')) &&
             Assert(s->Endswith('c')) &&
-            Assert(!s->Endswith('b')) &&
-            Assert(s->Contains('b')) &&
-            Assert(!s->Contains('e')) &&
-            Equal(s->Between('a', 'c'), (0, 2)) &&
-            Equal(s->Between('a', 'c', 8), (-1, -1)) &&
-            Equal(s->Matchat('abc', 8), (6, 9, 'abc')) &&
-            Equal(s->Matchat('acb', 8), (-1, -1, null_string))
+            Assert(!s->Endswith('b'))
     enddef
 
     def Test(): bool
-        return TestReplace() && TestStrip() && TestPartition() &&
-            TestSearch()
+        return TestReplace() && TestStrip() && TestSearch()
     enddef
 
     Test()
