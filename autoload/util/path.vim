@@ -103,7 +103,9 @@ enddef
 export def AsPosix(a_path: string, lower: bool = false): string
     var path = a_path->tr('\', '/')
 
-    if IsRelative(path) && path !~ '\v^(\.|\.\.)($|/)'
+    if IsRelative(path)
+            && path !~ '\v^(\.|\.\.)($|/)'
+            && (s_win && path !~ '\v^/')
         path = './' .. path
     endif
 
