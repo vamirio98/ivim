@@ -46,11 +46,23 @@ export def IsPosix(a_path: string): bool
 enddef
 
 def IsRelativeWin(a_path: string): bool
+    # NOTE: this is different from Windows native behavior,
+    # Windows treat 'C:' as relative path point to the folder what
+    # is last active on the 'C:' drive, but Vim treat 'C:' the same
+    # as 'C:/', try :echo fnamemodify('c:', ':p')
     return a_path->empty() || a_path->stridx(':') < 0
 enddef
 
 def IsRelativePosix(a_path: string): bool
     return a_path->empty() || a_path[0] != '/'
+enddef
+
+def IsAbsoluteWin(a_path: string): bool
+    return !IsRelativeWin(a_path)
+enddef
+
+def IsAbsolutePosix(a_path: string): bool
+    return !IsRelativePosix(a_path)
 enddef
 
 export def IsRelative(a_path: string): bool
@@ -66,7 +78,7 @@ enddef
 def DoPrune(a_path: string): string
     var path: string = a_path->mStr.Replace('\v/+', '/')
     # ./
-    path = a_path->mStr.Replace('\v(\./)+', './')
+    path = path->mStr.Replace('\v(\./)+', './')
     path = path->mStr.Replace('\V/./', '/')
 
     # trail '/.' or '/'
@@ -251,7 +263,7 @@ export def RelativeTo(a_path: string, a_other: string = '.'): string
         if newOther == other
             break
         endif
-        other = other = newOther
+        other = newOther
 
         head = '../' .. head
     endwhile
@@ -299,6 +311,8 @@ enddef
 
 
 export interface Path
+    var path: string
+
     # these method should be static method, but now vim9script
     # interface do not support static method
     def Home(): Path
@@ -317,15 +331,15 @@ export interface Path
     def IsSocket(): bool
     def IsFifo(): bool
 
-    def IterDir(): list<Path>
+    def Iterdir(): list<Path>
 
     def Joinpath(...paths: list<any>): Path
 
     def Resolve(lower: bool): Path
 
-    def Drive(): Path
-    def Root(): Path
-    def Anchor: Path
+    def Drive(): string
+    def Root(): string
+    def Anchor(): string
 
     def Parts(): list<string>
     def Parent(): Path
@@ -350,9 +364,9 @@ export interface Path
 endinterface
 
 
-export class PosixPath
+export class PosixPath implements Path
     var _raw: string
-    var _path: string
+    var path: string
     var _ftype: string = null_string
 
     def string(): string
@@ -362,10 +376,10 @@ export class PosixPath
     def new(a_path: any = '')
         if type(a_path) == v:t_string
             this._raw = a_path->empty() ? '.' : a_path
-            this._path = AsPosix(this._raw)
+            this.path = AsPosix(this._raw)
         elseif type(a_path) == v:t_object && a_path->instanceof(Path)
             this._raw = a_path._raw
-            this._path = a_path._path
+            this.path = a_path.path
         else
             throw $'invalid param'
         endif
@@ -373,7 +387,7 @@ export class PosixPath
 
     def _newRawPath(a_raw: string, a_path: string)
         this._raw = a_raw
-        this._path = a_path
+        this.path = a_path
     enddef
 
 
@@ -387,64 +401,64 @@ export class PosixPath
 
 
     def IsAbsolute(): bool
-        return IsAbsolutePosix(this._path)
+        return IsAbsolutePosix(this.path)
     enddef
 
     def IsRelative(): bool
-        return IsRelativePosix(this._path)
+        return IsRelativePosix(this.path)
     enddef
 
 
-    def AsPosix(lower: bool = false): Path
-        return lower ? this._path->tolower() : this._path
+    def AsPosix(lower: bool = false): string
+        return lower ? this.path->tolower() : this.path
     enddef
 
 
     def IsFile(): bool
         if this._ftype == null
-            this._ftype = getftype(this._path)
+            this._ftype = getftype(this.path)
         endif
         return this._ftype == 'file'
     enddef
 
     def IsDir(): bool
         if this._ftype == null
-            this._ftype = getftype(this._path)
+            this._ftype = getftype(this.path)
         endif
         return this._ftype == 'dir'
     enddef
 
     def IsSymlink(): bool
         if this._ftype == null
-            this._ftype = getftype(this._path)
+            this._ftype = getftype(this.path)
         endif
         return this._ftype == 'link'
     enddef
 
     def IsBlockDevice(): bool
         if this._ftype == null
-            this._ftype = getftype(this._path)
+            this._ftype = getftype(this.path)
         endif
         return this._ftype == 'bdev'
     enddef
 
     def IsCharDevice(): bool
         if this._ftype == null
-            this._ftype = getftype(this._path)
+            this._ftype = getftype(this.path)
         endif
         return this._ftype == 'cdev'
     enddef
 
     def IsSocket(): bool
         if this._ftype == null
-            this._ftype = getftype(this._path)
+            this._ftype = getftype(this.path)
         endif
         return this._ftype == 'socket'
     enddef
 
     def IsFifo(): bool
         if this._ftype == null
-            this._ftype = getftype(this._path)
+            this._ftype = getftype(this.path)
         endif
         return this._ftype == 'fifo'
     enddef
@@ -454,7 +468,7 @@ export class PosixPath
         if !this.IsDir()
             throw $'not a directory'
         endif
-        return readdir(this._path)
+        return readdir(this.path)
             ->map((_, v) => PosixPath.new(this).Joinpath(v))
     enddef
 
@@ -463,7 +477,7 @@ export class PosixPath
         if a_path->type() == v:t_string
             return a_path
         elseif a_path->type() == v:t_object && a_path->instanceof(Path)
-            return a_path._path
+            return a_path.path
         else
             throw 'invalid param'
         endif
@@ -471,9 +485,9 @@ export class PosixPath
 
 
     def Joinpath(...paths: list<any>): Path
-        var path: string = this._path
+        var path: string = this.path
         for p in paths
-            var np: string = _String(p)->AsPosix()
+            var np: string = PosixPath._String(p)->AsPosix()
             path = JoinTwoPath(path, np)
         endfor
         return PosixPath._newRawPath(path, path)
@@ -481,37 +495,129 @@ export class PosixPath
 
 
     def Resolve(lower: bool): Path
+        var path: string = DoResolve(this.path)
+        return PosixPath._newRawPath(path, path)
+    enddef
 
-    def Drive(): Path
-    def Root(): Path
-    def Anchor: Path
+
+    def Drive(): string
+        return ''
+    enddef
+
+    def Root(): string
+        return this.IsAbsolute() ? '/' : ''
+    enddef
+
+    def Anchor(): string
+        return this.Root()
+    enddef
 
     def Parts(): list<string>
+        return [this.Anchor()] + this.path->split('/', 0)
+    enddef
+
     def Parent(): Path
+        var path: string = this.path->fnamemodify(':h')
+        return PosixPath._newRawPath(path, path)
+    enddef
+
     def Parents(): list<Path>
+        var parents: list<Path> = []
+        var p: Path = this
+
+        while 1
+            var pp: string = p.path->fnamemodify(':h')
+            if pp == p.path
+                break
+            endif
+            p = PosixPath._newRawPath(pp, pp)
+            parents->add(p)
+        endwhile
+
+        return parents
+    enddef
+
     def Name(): string
+        return this.path->fnamemodify(':t')
+    enddef
+
     def Suffix(): string
+        return this.path->fnamemodify(':e')
+    enddef
+
     def Suffixes(): list<string>
+        var name: string = this.Name()
+        var pos = name->stridx('.', 1)  # handle with dot file
+        return pos < 0 ? [] : name->slice(pos)->split('\ze\.')
+    enddef
+
     def Stem(): string
+        return this.path->fnamemodify(':t:r')
+    enddef
 
     def IsSamefile(other: any): bool
+        return IsSamefile(this.path, PosixPath._String(other))
+    enddef
 
     def Exists(): bool
+        return Exists(this.path)
+    enddef
 
-    def RelativeTo(other: any): Path
-    def WithName(name: string): Path
-    def WithStem(stem: string): Path
-    def WithSuffix(suffix: string): Path
+    def RelativeTo(a_other: any): Path
+        var other: string = PosixPath._String(a_other)
+        var np: string = RelativeTo(this.path, other)
+        return PosixPath.new(np)
+    enddef
 
-    def Mkdir(mode: number, flags: string): number
+    def WithName(a_name: string): Path
+        var name: string = this.Name()
+        if name->empty() || a_name->empty()
+            throw $'empty name'
+        endif
+
+        var np: string = JoinTwoPath(this.path->slice(0, -len(name)), a_name)
+        return PosixPath._newRawPath(np, np)
+    enddef
+
+    def WithStem(a_stem: string): Path
+        var name: string = this.Name()
+        if empty(name) || empty(a_stem)
+            throw 'empty name/stem'
+        endif
+
+        var suffix: string = this.Suffix()
+        var np: string = JoinTwoPath(this.path->slice(0, -len(name)),
+            a_stem .. suffix)
+        return PosixPath._newRawPath(np, np)
+    enddef
+
+    def WithSuffix(a_suffix: string): Path
+        if empty(a_suffix) || a_suffix !~ '\v^\.'
+            throw 'invalid param'
+        endif
+
+        var suffix: string = this.Suffix()
+        var np = this.path->slice(0, -len(suffix)) .. a_suffix
+        return PosixPath._newRawPath(np, np)
+    enddef
+
+    def Mkdir(mode: number = 0o755, flags: string = ''): number
+        return Mkdir(this.path, mode, flags)
+    enddef
+
     def Unlink(): number
+        return Unlink(this.path)
+    enddef
+
     def Rmdir(): number
+        return Rmdir(this.path)
+    enddef
 endclass
 
 
-export class WinPath
+export class WinPath implements Path
     var _raw: string
-    var _path: string
+    var path: string
     var _ftype: string = null_string
 
     def string(): string
@@ -521,10 +627,11 @@ export class WinPath
     def new(a_path: any = '')
         if type(a_path) == v:t_string
             this._raw = a_path->empty() ? '.' : a_path
-            this._path = AsPosix(this._raw)
+            this.path = AsPosix(this._raw)
+            this._raw = this.path->AsNative()
         elseif type(a_path) == v:t_object && a_path->instanceof(Path)
             this._raw = a_path._raw
-            this._path = a_path._path
+            this.path = a_path.path
         else
             throw $'invalid param'
         endif
@@ -532,7 +639,7 @@ export class WinPath
 
     def _newRawPath(a_raw: string, a_path: string)
         this._raw = a_raw
-        this._path = a_path
+        this.path = a_path
     enddef
 
 
@@ -546,64 +653,64 @@ export class WinPath
 
 
     def IsAbsolute(): bool
-        return IsAbsoluteWin(this._path)
+        return IsAbsoluteWin(this.path)
     enddef
 
     def IsRelative(): bool
-        return IsRelativeWin(this._path)
+        return IsRelativeWin(this.path)
     enddef
 
 
-    def AsPosix(lower: bool = false): Path
-        return lower ? this._path->tolower() : this._path
+    def AsPosix(lower: bool = false): string
+        return lower ? this.path->tolower() : this.path
     enddef
 
 
     def IsFile(): bool
         if this._ftype == null
-            this._ftype = getftype(this._path)
+            this._ftype = getftype(this.path)
         endif
         return this._ftype == 'file'
     enddef
 
     def IsDir(): bool
         if this._ftype == null
-            this._ftype = getftype(this._path)
+            this._ftype = getftype(this.path)
         endif
         return this._ftype == 'dir'
     enddef
 
     def IsSymlink(): bool
         if this._ftype == null
-            this._ftype = getftype(this._path)
+            this._ftype = getftype(this.path)
         endif
         return this._ftype == 'link'
     enddef
 
     def IsBlockDevice(): bool
         if this._ftype == null
-            this._ftype = getftype(this._path)
+            this._ftype = getftype(this.path)
         endif
         return this._ftype == 'bdev'
     enddef
 
     def IsCharDevice(): bool
         if this._ftype == null
-            this._ftype = getftype(this._path)
+            this._ftype = getftype(this.path)
         endif
         return this._ftype == 'cdev'
     enddef
 
     def IsSocket(): bool
         if this._ftype == null
-            this._ftype = getftype(this._path)
+            this._ftype = getftype(this.path)
         endif
         return this._ftype == 'socket'
     enddef
 
     def IsFifo(): bool
         if this._ftype == null
-            this._ftype = getftype(this._path)
+            this._ftype = getftype(this.path)
         endif
         return this._ftype == 'fifo'
     enddef
@@ -613,15 +720,26 @@ export class WinPath
         if !this.IsDir()
             throw $'not a directory'
         endif
-        return readdir(this._path)
+        return readdir(this.path)
             ->map((_, v) => WinPath.new(this).Joinpath(v))
     enddef
 
 
+    static def _String(a_path: any): string
+        if a_path->type() == v:t_string
+            return a_path
+        elseif a_path->type() == v:t_object && a_path->instanceof(Path)
+            return a_path.path
+        else
+            throw 'invalid param'
+        endif
+    enddef
+
+
     def Joinpath(...paths: list<any>): Path
-        var path: string = this._path
+        var path: string = this.path
         for p in paths
-            var np: string = _String(p)->AsPosix()
+            var np: string = WinPath._String(p)->AsPosix()
             path = JoinTwoPath(path, np)
         endfor
         return WinPath._newRawPath(path->AsNative(), path)
@@ -629,255 +747,131 @@ export class WinPath
 
 
     def Resolve(lower: bool): Path
+        var path: string = DoResolve(this.path)
+        return WinPath._newRawPath(path->AsNative(), path)
+    enddef
 
-    def Drive(): Path
-    def Root(): Path
-    def Anchor: Path
+
+    def Drive(): string
+        return this.IsAbsolute() ? this.path->slice(0, 2) : ''
+    enddef
+
+    def Root(): string
+        return (this.IsAbsolute() || (this.path =~ '\v^/'))
+            ? '/'->AsNative() : ''
+    enddef
+
+    def Anchor(): string
+        return JoinTwoPath(this.Drive(), this.Root())->AsNative()
+    enddef
 
     def Parts(): list<string>
+        var parts: list<string> = [this.Anchor()] + this.path->split('/', 0)
+        return parts->map((_, v) => AsNative(v))
+    enddef
+
     def Parent(): Path
-    def Parents(): list<Path>
-    def Name(): string
-    def Suffix(): string
-    def Suffixes(): list<string>
-    def Stem(): string
-
-    def IsSamefile(other: any): bool
-
-    def Exists(): bool
-
-    def RelativeTo(other: any): Path
-    def WithName(name: string): Path
-    def WithStem(stem: string): Path
-    def WithSuffix(suffix: string): Path
-
-    def Mkdir(mode: number, flags: string): number
-    def Unlink(): number
-    def Rmdir(): number
-endclass
-
-export class Path
-    # resolve the path, return as posix format
-    # NOTE: if the path is a network path, this function may freeze when parsing
-    def Resolve(lower: bool = false): Path
-        if this.empty() | return Path.new() | endif
-
-        var path: string = null_string
-        # network path, may freeze terminal when parsing
-        if this.IsUnc() || this.IsProtocol()
-            path = this.posix->fnamemodify(':p')->AsPosix(lower)
-            if path->len() != 2
-                path = path[: -2]
-            endif
-        elseif this.IsProtocol()
-            path = this.posix->fnamemodify(':p')->AsPosix(lower)
-            if path !~ '\v://$'
-                path = path[: -2]
-            endif
-        else
-            path = this.posix->fnamemodify(':p')->AsPosix(lower)
-            if path[-1] == '/' &&
-                    path->len() != 1 &&
-                    !(windows && path =~ '^\a:/$')
-                path = path[: -2]
-            endif
-        endif
-
-        return Path.new(path)
-    enddef
-
-    def Exists(): bool
-        return !this.posix->glob(1)->empty()
-    enddef
-
-
-    def Drive(): Path
-        if this.IsUnc()
-            # //server
-            var sep1 = this.posix->stridx('/', 2)
-            if sep1 < 0
-                return Path.new(this.posix)
-            endif
-            var sep2 = this.posix->stridx('/', sep1 + 1)
-            # //server/share
-            if sep2 < 0
-                return Path.new(this.posix)
-            endif
-            # //server/share/a
-            return Path.new(this.posix[0 : sep2 - 1])
-        elseif this.posix =~ '\v^\a:'
-            return Path.new(this.posix->slice(0, 2))
-        else  # protocol or posix
-            return Path.new()
-        endif
-    enddef
-
-
-    def Root(): Path
-        if this.IsUnc()
-            return Path.new('/')
-        elseif this.posix =~ '\v^\a:/'
-            return Path.new('/')
-        elseif this.posix =~ '\v^/([^/]|$)'
-            return Path.new('/')
-        else
-            return Path.new()
-        endif
-    enddef
-
-
-    def Anchor(): Path
-        if this.IsProtocol()
-            return Path.new()
-        elseif this.posix =~ '\v^\a:/' || this.IsUnc()
-            return Path.new(this.Drive().posix .. '/')
-        else
-            return this._JoinTwoPath(this.Drive(), this.Root())
-        endif
-    enddef
-
-
-    def Parts(): list<string>
-        if this.IsProtocol()
-            return this.posix->split('/', 0)->filter((_, v) => !v->empty())
-        endif
-        var anchor: string = this.Anchor().posix
-        return [anchor] + this.posix[anchor->len() :]->split('/', 0)
-    enddef
-
-    # NOTE: this just the string opeartation, so:
-    # Path('foo/..').Parent() == Path('foo')
-    def Parent(): Path
-        var anchor: Path = this.Anchor()
-        var anchorLen: number = anchor.posix->len()
-        var pos: number = this.posix[anchorLen :]->strridx('/')
-        if pos < 0
-            if !anchor->empty()
-                return anchor
-            else
-                return Path.new('.')
-            endif
-        else
-            return Path.new(this.posix->slice(0, anchorLen + pos))
-        endif
+        var path: string = this.path->fnamemodify(':h')
+        return WinPath._newRawPath(path->AsNative(), path)
     enddef
 
     def Parents(): list<Path>
-        var p = this.Parent()
-        var pp = p.Parent()
-        var parents: list<Path> = [ p ]
-        while p.posix != pp.posix
-            p = pp
-            pp = p.Parent()
+        var parents: list<Path> = []
+        var p: Path = this
+
+        while 1
+            var pp: string = p.path->fnamemodify(':h')
+            if pp == p.path
+                break
+            endif
+            p = WinPath._newRawPath(pp->AsNative(), pp)
             parents->add(p)
         endwhile
+
         return parents
     enddef
 
     def Name(): string
-        var anchorLen: number = this.Anchor().posix->len()
-        var pos = this.posix[anchorLen :]->strridx('/')
-        return this.posix[anchorLen :][pos < 0 ? 0 : pos + 1 :]
+        return this.path->fnamemodify(':t')
     enddef
 
     def Suffix(): string
-        var name: string = this.Name()
-        var pos = name->strridx('.')
-        return (pos < 0 || pos == 0) ? '' : name[pos :]
+        return this.path->fnamemodify(':e')
     enddef
 
     def Suffixes(): list<string>
         var name: string = this.Name()
-        var pos = name->stridx('.', 1)
-        return pos < 0 ? [] : name[pos :]->split('\ze\.')
+        var pos = name->stridx('.', 1)  # handle with dot file
+        return pos < 0 ? [] : name->slice(pos)->split('\ze\.')
     enddef
 
     def Stem(): string
-        var name: string = this.Name()
-        var suffix: string = this.Suffix()
-        return name->slice(0, name->len() - suffix->len())
+        return this.path->fnamemodify(':t:r')
     enddef
 
-    def Native(): string
-        return (this.IsProtocol() || !windows) ? this.posix :
-            this.posix->tr('/', '\')
+    def IsSamefile(other: any): bool
+        return IsSamefile(this.path, WinPath._String(other))
     enddef
 
-    # whether this path has sub-file {path}
-    def Contains(a_path: any): bool
-        var p = Path.new(a_path)
-        return p.Resolve().path->stridx(this.Resolve().path) == 0
+    def Exists(): bool
+        return Exists(this.path)
     enddef
 
     def RelativeTo(a_other: any): Path
-        var other = Path.new(a_other).Resolve()
-        var op: string = other.posix
-        var oa: string = other.Anchor().posix
-        var path: string = this.Resolve().posix
-        var head: string = ''
-        while 1
-            if path->stridx(op) == 0
-                path = path[op->len() :]
-                if path =~ '\v^/'
-                    path = path[1 :]
-                endif
-                return Path.new(head .. path)
-            endif
-
-            if op->len() <= oa->len()
-                break
-            endif
-            op = op->slice(0, op->strridx('/'))
-            head = '../' .. head
-        endwhile
-        throw $'no common part in ''{this.path}'' and ''{Path.new(a_other).path}'''
+        var other: string = WinPath._String(a_other)
+        var np: string = RelativeTo(this.path, other)
+        return WinPath.new(np->AsNative())
     enddef
 
     def WithName(a_name: string): Path
         var name: string = this.Name()
-        if name->empty()
-            throw $'{this.path} has an empty name'
+        if name->empty() || a_name->empty()
+            throw $'empty name'
         endif
-        return Path.new(this.path->slice(0, -(name->len())) .. a_name)
+
+        var np: string = JoinTwoPath(this.path->slice(0, -len(name)), a_name)
+        return WinPath._newRawPath(np->AsNative(), np)
     enddef
 
     def WithStem(a_stem: string): Path
         var name: string = this.Name()
-        var suffix: string = this.Suffix()
-        if name->empty()
-            throw $'{this.path} has an empty name'
+        if empty(name) || empty(a_stem)
+            throw 'empty name/stem'
         endif
-        return Path.new(this.path->slice(0, -(name->len())) .. a_stem .. suffix)
+
+        var suffix: string = this.Suffix()
+        var np: string = JoinTwoPath(this.path->slice(0, -len(name)),
+            a_stem .. suffix)
+        return WinPath._newRawPath(np->AsNative(), np)
     enddef
 
     def WithSuffix(a_suffix: string): Path
-        if a_suffix !~ '\v^\.' && !a_suffix->empty()
-            throw $'invalid suffix ''{a_suffix}'''
+        if empty(a_suffix) || a_suffix !~ '\v^\.'
+            throw 'invalid param'
         endif
+
         var suffix: string = this.Suffix()
-        return Path.new(this.path[: -(suffix->len() + 1)] .. a_suffix)
+        var np = this.path->slice(0, -len(suffix)) .. a_suffix
+        return WinPath._newRawPath(np->AsNative(), np)
     enddef
 
-    def IsSamefile(other: any): bool
-        return this.Resolve(1).path == Path.new(other).Resolve(1).path
-    enddef
-
-    # :h mkdir
     def Mkdir(mode: number = 0o755, flags: string = ''): number
-        return this.Resolve().posix->mkdir(flags, mode)
+        return Mkdir(this.path, mode, flags)
     enddef
 
     def Unlink(): number
-        if this.IsDir()
-            return this.Rmdir()
-        endif
-        return this.Resolve().posix->delete()
+        return Unlink(this.path)
     enddef
 
     def Rmdir(): number
-        return this.Resolve().posix->delete('d')
+        return Rmdir(this.path)
     enddef
 endclass
+
+
+export def New(a_path: any): Path
+    return s_win ? WinPath.new(a_path) : PosixPath.new(a_path)
+enddef
 
 
 # Change dir {{{ #

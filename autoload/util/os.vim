@@ -1,6 +1,6 @@
 vim9script
 
-import autoload './string.vim' as str
+import autoload './str.vim' as str
 
 
 var s_sysUname: string = null_string
