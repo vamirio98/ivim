@@ -1,5 +1,7 @@
 vim9script
 
+finish
+
 import autoload 'vc/util/notify.vim'
 
 var sExportLines: list<string> = []

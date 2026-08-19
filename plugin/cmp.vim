@@ -1,5 +1,7 @@
 vim9script
 
+finish
+
 if get(g:, 'vc_plugin_cmp_loaded', 0)
     finish
 endif

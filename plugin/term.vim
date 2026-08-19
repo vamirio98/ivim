@@ -1,5 +1,7 @@
 vim9script
 
+finish
+
 import autoload "vc/term/term.vim"
 import autoload "vc/util/list.vim" as ilist
 

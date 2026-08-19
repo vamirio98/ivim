@@ -1,5 +1,7 @@
 vim9script
 
+finish
+
 if !get(g:, 'vcSessionEnable', 1)
     finish
 endif

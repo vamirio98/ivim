@@ -1,5 +1,7 @@
 vim9script
 
+finish
+
 import autoload 'vc/tui/highlight.vim' as vhl
 
 # TODO: support multi style border chars, get them from a function

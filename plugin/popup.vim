@@ -1,5 +1,7 @@
 vim9script
 
+finish
+
 import autoload 'vc/util/buffer.vim'
 import autoload 'vc/util/popup/popup.vim'
 

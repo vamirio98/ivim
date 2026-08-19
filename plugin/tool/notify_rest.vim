@@ -1,5 +1,7 @@
 vim9script
 
+finish
+
 import autoload 'vc/util/notify.vim' as mn
 import autoload 'vc/tui/confirm.vim' as mc
 
