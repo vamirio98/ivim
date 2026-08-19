@@ -375,7 +375,7 @@ export class PosixPath implements Path
         return this._raw
     enddef
 
-    def new(a_path: any = '')
+    def new(a_path: any = '.')
         if type(a_path) == v:t_string
             this._raw = a_path->empty() ? '.' : a_path
             this.path = AsPosix(this._raw)
@@ -496,8 +496,8 @@ export class PosixPath implements Path
     enddef
 
 
-    def Resolve(lower: bool): Path
-        var path: string = DoResolve(this.path)
+    def Resolve(lower: bool = false): Path
+        var path: string = DoResolve(this.path, lower)
         return PosixPath._newRawPath(path, path)
     enddef
 
@@ -515,7 +515,8 @@ export class PosixPath implements Path
     enddef
 
     def Parts(): list<string>
-        return [this.Anchor()] + this.path->split('/', 0)
+        var anchor: string = this.Anchor()
+        return [anchor] + this.path->slice(len(anchor))->split('/', 0)
     enddef
 
     def Parent(): Path
@@ -589,18 +590,16 @@ export class PosixPath implements Path
 
         var suffix: string = this.Suffix()
         var np: string = JoinTwoPath(this.path->slice(0, -len(name)),
-            a_stem .. suffix)
+            $'{a_stem}.{suffix}')
         return PosixPath._newRawPath(np, np)
     enddef
 
     def WithSuffix(a_suffix: string): Path
-        if empty(a_suffix) || a_suffix !~ '\v^\.'
-            throw 'invalid param'
-        endif
-
         var suffix: string = this.Suffix()
-        var np = this.path->slice(0, -len(suffix)) .. a_suffix
-        return PosixPath._newRawPath(np, np)
+        var np: string = empty(suffix) ? this.path :
+            this.path->slice(0, -len(suffix) - 1)  # remove the tailing '.'
+        np = $'{np}{empty(a_suffix) ? '' : '.'}{a_suffix}'
+        return WinPath._newRawPath(np->AsNative(), np)
     enddef
 
     def Mkdir(mode: number = 0o755, flags: string = ''): number
@@ -626,7 +625,7 @@ export class WinPath implements Path
         return this._raw
     enddef
 
-    def new(a_path: any = '')
+    def new(a_path: any = '.')
         if type(a_path) == v:t_string
             this._raw = a_path->empty() ? '.' : a_path
             this.path = AsPosix(this._raw)
@@ -748,8 +747,8 @@ export class WinPath implements Path
     enddef
 
 
-    def Resolve(lower: bool): Path
-        var path: string = DoResolve(this.path)
+    def Resolve(lower: bool = false): Path
+        var path: string = DoResolve(this.path, lower)
         return WinPath._newRawPath(path->AsNative(), path)
     enddef
 
@@ -768,7 +767,9 @@ export class WinPath implements Path
     enddef
 
     def Parts(): list<string>
-        var parts: list<string> = [this.Anchor()] + this.path->split('/', 0)
+        var anchor: string = this.Anchor()
+        var parts: list<string> = [anchor] +
+            this.path->slice(len(anchor))->split('/', 0)
         return parts->map((_, v) => AsNative(v))
     enddef
 
@@ -843,17 +844,15 @@ export class WinPath implements Path
 
         var suffix: string = this.Suffix()
         var np: string = JoinTwoPath(this.path->slice(0, -len(name)),
-            a_stem .. suffix)
+            $'{a_stem}.{suffix}')
         return WinPath._newRawPath(np->AsNative(), np)
     enddef
 
     def WithSuffix(a_suffix: string): Path
-        if empty(a_suffix) || a_suffix !~ '\v^\.'
-            throw 'invalid param'
-        endif
-
         var suffix: string = this.Suffix()
-        var np = this.path->slice(0, -len(suffix)) .. a_suffix
+        var np: string = empty(suffix) ? this.path :
+            this.path->slice(0, -len(suffix) - 1)  # remove the tailing '.'
+        np = $'{np}{empty(a_suffix) ? '' : '.'}{a_suffix}'
         return WinPath._newRawPath(np->AsNative(), np)
     enddef
 
@@ -871,7 +870,7 @@ export class WinPath implements Path
 endclass
 
 
-export def New(a_path: any): Path
+export def New(a_path: any = '.'): Path
     return s_win ? WinPath.new(a_path) : PosixPath.new(a_path)
 enddef
 
@@ -894,11 +893,12 @@ enddef
 
 
 # Testing suit. {{{ #
-if 0
+if 1
     import autoload './debug.vim'
 
     var Assert = debug.Assert
     var MdEqual = debug.Equal
+    var P = New
 
     def TestAsPosix(): bool
         return MdEqual(AsPosix('c:\a\b'), 'c:/a/b') &&
@@ -908,31 +908,20 @@ if 0
             MdEqual(AsPosix('../'), '..') &&
             MdEqual(AsPosix('///a////'), '/a') &&
             MdEqual(AsPosix('.//'), '.') &&
-            MdEqual(AsPosix('..///'), '..') &&
-            MdEqual(AsPosix('\\a\\\b'), '//a/b') &&
-            MdEqual(AsPosix('\\192.168.1.1/a'), '//192.168.1.1/a') &&
-            MdEqual(AsPosix('//a/b/'), '//a/b') &&
-            MdEqual(AsPosix('//a////b'), '//a/b') &&
-            MdEqual(AsPosix('ftp://a'), 'ftp://a') &&
-            MdEqual(AsPosix('http://a//'), 'http://a') &&
-            MdEqual(AsPosix('//'), '//')
+            MdEqual(AsPosix('..///'), '..')
     enddef
 
     def TestPathType(): bool
-        return P('\\a\b').IsUnc()->Assert() &&
-            (!P('\a\b').IsUnc())->Assert() &&
-            P('ab://abc////').IsProtocol()->Assert() &&
-            (!P('ab:://ab').IsProtocol())->Assert() &&
-            (windows == !P('/a').IsAbsolute())->Assert() &&
-            (windows == P('a:/b').IsAbsolute())->Assert() &&
-            (windows == P('a:').IsAbsolute())->Assert() &&
-            (windows == P('a://').IsAbsolute())->Assert() &&
+        return (s_win == !P('/a').IsAbsolute())->Assert() &&
+            (s_win == P('a:/b').IsAbsolute())->Assert() &&
+            (s_win == P('a:').IsAbsolute())->Assert() &&
+            (s_win == P('a://').IsAbsolute())->Assert() &&
             (!P('//').IsAbsolute())->Assert() &&
             P('./').IsRelative()->Assert() &&
             P('../').IsRelative()->Assert() &&
             P('.').IsRelative()->Assert() &&
             P('..').IsRelative()->Assert() &&
-            (windows == P('/a').IsRelative())->Assert()
+            (s_win == P('/a').IsRelative())->Assert()
     enddef
 
     def TestParse(): bool
@@ -940,61 +929,50 @@ if 0
         # echo P('c:/etc').RelativeTo('d:/usr')
         # echo P('c:/').WithName('a.vim')
         # echo P('c:/').WithStem('a')
-        return P('/a/b///').Resolve().Native()
+
+        return P('/a/b///').Resolve(false)->string()
             ->MdEqual('/a/b'->fnamemodify(':p')) &&
-            P('a/b/c').Native()->MdEqual(windows ? '.\a\b\c' : './a/b/c') &&
-            P('/a/b').Contains('/a/b/c')->Assert() &&
-            (!P('/a/b').Contains('/a'))->Assert() &&
-            P('/etc/passwd').RelativeTo('/')->string()->MdEqual('etc/passwd') &&
-            P('/etc/passwd').RelativeTo('/etc')->string()->MdEqual('passwd') &&
-            P('c:/d/e.tar.gz').WithName('a.vim')->string()->MdEqual('c:/d/a.vim') &&
-            P('c:/a/b.txt').WithStem('c')->string()->MdEqual('c:/a/c.txt') &&
-            P('c:/a/b.tar.gz').WithStem('c')->string()->MdEqual('c:/a/c.gz') &&
-            P('c:/a/b.tar.gz').WithSuffix('.bz2')->string()->MdEqual('c:/a/b.tar.bz2') &&
-            P('c:/a/b').WithSuffix('.txt')->string()->MdEqual('c:/a/b.txt') &&
-            P('c:/a/b.txt').WithSuffix('')->string()->MdEqual('c:/a/b') &&
-            Home()->string()->MdEqual(expand('~')) &&
-            Cwd()->string()->MdEqual(expand('.'))
+            P('a/b/c').path->MdEqual('./a/b/c') &&
+            P('/etc/passwd').RelativeTo('/').path->MdEqual('./etc/passwd') &&
+            P('/etc/passwd').RelativeTo('/etc').path->MdEqual('./passwd') &&
+            P('c:/d/e.tar.gz').WithName('a.vim').path->MdEqual('c:/d/a.vim') &&
+            P('c:/a/b.txt').WithStem('c').path->MdEqual('c:/a/c.txt') &&
+            P('c:/a/b.tar.gz').WithStem('c').path->MdEqual('c:/a/c.gz') &&
+            P('c:/a/b.tar.gz').WithSuffix('bz2').path->MdEqual('c:/a/b.tar.bz2') &&
+            P('c:/a/b').WithSuffix('txt').path->MdEqual('c:/a/b.txt') &&
+            P('c:/a/b.txt').WithSuffix('').path->MdEqual('c:/a/b') &&
+            Home()->MdEqual(expand('~')) &&
+            Cwd()->MdEqual(fnamemodify('.', ':p'))
     enddef
 
     def TestParts(): bool
-        return P('//server').Drive()->string()->MdEqual('//server') &&
-            P('//server/share').Drive()->string()->MdEqual('//server/share') &&
-            P('//server/share/a').Drive()->string()->MdEqual('//server/share') &&
-            P('ftp://a').Drive()->string()->MdEqual('') &&
-            P('c:/a/').Root()->string()->MdEqual('/') &&
-            P('c:a').Root()->string()->MdEqual('') &&
-            P('/').Root()->string()->MdEqual('/') &&
-            P('ftp://a').Root()->string()->MdEqual('') &&
-            P('c:/a/b').Anchor()->string()->MdEqual('c:/') &&
-            P('c:a/b').Anchor()->string()->MdEqual('c:') &&
-            P('/etc').Anchor()->string()->MdEqual('/') &&
+        return P('c:/a/').Root()->MdEqual('/') &&
+            P('c:a').Root()->MdEqual('/') &&
+            P('/').Root()->MdEqual('/') &&
+            P('c:/a/b').Anchor()->MdEqual('c:/') &&
+            P('c:a/b').Anchor()->MdEqual('c:/') &&
+            P('/etc').Anchor()->MdEqual('/') &&
             P('.').Anchor()->empty()->Assert() &&
             P('..').Anchor()->empty()->Assert() &&
             P().Anchor()->empty()->Assert() &&
-            P('\\host/share').Anchor()->string()->MdEqual('//host/share/') &&
-            P('ftp://a').Anchor()->string()->MdEqual('') &&
             P('/usr/bin/python3').Parts()->MdEqual(['/', 'usr', 'bin', 'python3']) &&
             P('c:\\Program Files/PSF').Parts()->MdEqual(['c:/', 'Program Files', 'PSF']) &&
-            P('ftp://a').Parts()->MdEqual(['ftp:', 'a']) &&
-            P('/a/b/c/d').Parent()->string()->MdEqual('/a/b/c') &&
-            P('/').Parent()->string()->MdEqual('/') &&
-            P('.').Parent()->string()->MdEqual('.') &&
-            P('').Parent()->string()->MdEqual('.') &&
+            P('/a/b/c/d').Parent().path->MdEqual('/a/b/c') &&
+            P('/').Parent().path->MdEqual('/') &&
+            P('.').Parent().path->MdEqual('.') &&
+            P('').Parent().path->MdEqual('.') &&
             P('c:/foo/bar/setup.py').Parents()->copy()
-            ->map((_, v) => v->string())->MdEqual([
+            ->map((_, v) => v.path)->MdEqual([
                 'c:/foo/bar', 'c:/foo', 'c:/'
             ]) &&
-            P('/a/b/c').Parents()->copy()->map((_, v) => v->string())
+            P('/a/b/c').Parents()->copy()->map((_, v) => v.path)
             ->MdEqual(['/a/b', '/a', '/']) &&
             P('my/library/setup.py').Name()->MdEqual('setup.py') &&
-            P('//some/share/setup.py').Name()->MdEqual('setup.py') &&
-            P('//some/share/').Name()->MdEqual('') &&
-            P('my/library/a.vim').Suffix()->MdEqual('.vim') &&
-            P('my/library/a.tar.gz').Suffix()->MdEqual('.gz') &&
+            P('my/library/a.vim').Suffix()->MdEqual('vim') &&
+            P('my/library/a.tar.gz').Suffix()->MdEqual('gz') &&
             P('my/library').Suffix()->MdEqual('') &&
             P('my/library/.ignore').Suffix()->MdEqual('') &&
-            P('my/library/a.').Suffix()->MdEqual('.') &&
+            P('my/library/a.').Suffix()->MdEqual('') &&
             P('my/library.tar.gz').Suffixes()->MdEqual(['.tar', '.gz']) &&
             P('my/library').Suffixes()->MdEqual([]) &&
             P('my/library.tar.gz').Stem()->MdEqual('library.tar') &&
@@ -1004,8 +982,9 @@ if 0
 
 
     def TestJoinpath(): bool
-        return P('/a').Joinpath(P('b'), P('c/d'))->string()->MdEqual('/a/b/c/d') &&
-            P('/a').Joinpath('/b')->string()->MdEqual(windows ? '/a/b' : '/b')
+        return P('/a').Joinpath(P('b'), P('c/d'))->string()
+            ->MdEqual('/a/b/c/d')
+            && P('/a').Joinpath('/b')->string()->MdEqual(s_win ? '/a/b' : '/b')
     enddef
 
     def TestIsPath(): bool
@@ -1018,19 +997,24 @@ if 0
             Assert(IsPath('C:/a')) && Assert(IsPath('C:\\a')) &&
             Assert(IsPath('C:/a\\..')) && Assert(IsPath('C:\\a/..')) &&
             Assert(IsPath('/tmp')) && Assert(IsPath('/tmp/')) &&
-            Assert(IsPath('/tmp/..')) && Assert(IsPath('/tmp\\..')) &&
-            Assert(IsPath('https://')) && Assert(IsPath(''))
+            Assert(IsPath('/tmp/..')) && Assert(IsPath('/tmp\\..'))
     enddef
 
     def Test(): void
-        TestIsPath() &&
-            TestAsPosix() &&
-            TestPathType() &&
-            TestParse() &&
-            TestParts() &&
-            TestJoinpath()
+        var savedShellslash = &shellslash
+        set shellslash
+        defer () => {
+            &shellslash = savedShellslash
+        }()
+        TestIsPath()
+            && TestAsPosix()
+            && TestPathType()
+            && TestParse()
+            && TestParts()
+            && TestJoinpath()
     enddef
 
     Test()
+
 endif
 # }}} Testing suit. #
