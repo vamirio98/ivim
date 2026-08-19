@@ -105,7 +105,7 @@ export def AsPosix(a_path: string, lower: bool = false): string
 
     if IsRelative(path)
             && path !~ '\v^(\.|\.\.)($|/)'
-            && (s_win && path !~ '\v^/')
+            && (!s_win || path !~ '\v^/')
         path = './' .. path
     endif
 
@@ -599,7 +599,7 @@ export class PosixPath implements Path
         var np: string = empty(suffix) ? this.path :
             this.path->slice(0, -len(suffix) - 1)  # remove the tailing '.'
         np = $'{np}{empty(a_suffix) ? '' : '.'}{a_suffix}'
-        return WinPath._newRawPath(np->AsNative(), np)
+        return PosixPath._newRawPath(np->AsNative(), np)
     enddef
 
     def Mkdir(mode: number = 0o755, flags: string = ''): number
@@ -901,8 +901,8 @@ if 0
     var P = New
 
     def TestAsPosix(): bool
-        return MdEqual(AsPosix('c:\a\b'), 'c:/a/b') &&
-            MdEqual(AsPosix('c:\\a\\\\b'), 'c:/a/b') &&
+        return (!s_win || MdEqual(AsPosix('c:\a\b'), 'c:/a/b')) &&
+            (!s_win || MdEqual(AsPosix('c:\\a\\\\b'), 'c:/a/b')) &&
             MdEqual(AsPosix('////////'), '/') &&
             MdEqual(AsPosix('/a/'), '/a') && MdEqual(AsPosix('./'), '.') &&
             MdEqual(AsPosix('../'), '..') &&
@@ -916,7 +916,7 @@ if 0
             (s_win == P('a:/b').IsAbsolute())->Assert() &&
             (s_win == P('a:').IsAbsolute())->Assert() &&
             (s_win == P('a://').IsAbsolute())->Assert() &&
-            (!P('//').IsAbsolute())->Assert() &&
+            (s_win != P('/').IsAbsolute())->Assert() &&
             P('./').IsRelative()->Assert() &&
             P('../').IsRelative()->Assert() &&
             P('.').IsRelative()->Assert() &&
@@ -935,36 +935,39 @@ if 0
             P('a/b/c').path->MdEqual('./a/b/c') &&
             P('/etc/passwd').RelativeTo('/').path->MdEqual('./etc/passwd') &&
             P('/etc/passwd').RelativeTo('/etc').path->MdEqual('./passwd') &&
-            P('c:/d/e.tar.gz').WithName('a.vim').path->MdEqual('c:/d/a.vim') &&
-            P('c:/a/b.txt').WithStem('c').path->MdEqual('c:/a/c.txt') &&
-            P('c:/a/b.tar.gz').WithStem('c').path->MdEqual('c:/a/c.gz') &&
-            P('c:/a/b.tar.gz').WithSuffix('bz2').path->MdEqual('c:/a/b.tar.bz2') &&
-            P('c:/a/b').WithSuffix('txt').path->MdEqual('c:/a/b.txt') &&
-            P('c:/a/b.txt').WithSuffix('').path->MdEqual('c:/a/b') &&
+            P('d/e.tar.gz').WithName('a.vim').path->MdEqual('./d/a.vim') &&
+            P('a/b.txt').WithStem('c').path->MdEqual('./a/c.txt') &&
+            P('a/b.tar.gz').WithStem('c').path->MdEqual('./a/c.gz') &&
+            P('a/b.tar.gz').WithSuffix('bz2').path
+                ->MdEqual('./a/b.tar.bz2') &&
+            P('a/b').WithSuffix('txt').path->MdEqual('./a/b.txt') &&
+            P('a/b.txt').WithSuffix('').path->MdEqual('./a/b') &&
             Home()->MdEqual(expand('~')) &&
             Cwd()->MdEqual(fnamemodify('.', ':p'))
     enddef
 
     def TestParts(): bool
-        return P('c:/a/').Root()->MdEqual('/') &&
-            P('c:a').Root()->MdEqual('/') &&
+        return (!s_win ||
+                (P('c:/a/').Root()->MdEqual('/') &&
+                P('c:a').Root()->MdEqual('/')) &&
+                P('c:\\Program Files/PSF').Parts()->MdEqual(['c:/', 'Program Files', 'PSF']) &&
+                P('c:/foo/bar/setup.py').Parents()->copy()
+                ->map((_, v) => v.path)->MdEqual([
+                    'c:/foo/bar', 'c:/foo', 'c:/'
+                ]) &&
+                P('c:/a/b').Anchor()->MdEqual('c:/') &&
+                P('c:a/b').Anchor()->MdEqual('c:/')
+            ) &&
             P('/').Root()->MdEqual('/') &&
-            P('c:/a/b').Anchor()->MdEqual('c:/') &&
-            P('c:a/b').Anchor()->MdEqual('c:/') &&
             P('/etc').Anchor()->MdEqual('/') &&
             P('.').Anchor()->empty()->Assert() &&
             P('..').Anchor()->empty()->Assert() &&
             P().Anchor()->empty()->Assert() &&
             P('/usr/bin/python3').Parts()->MdEqual(['/', 'usr', 'bin', 'python3']) &&
-            P('c:\\Program Files/PSF').Parts()->MdEqual(['c:/', 'Program Files', 'PSF']) &&
             P('/a/b/c/d').Parent().path->MdEqual('/a/b/c') &&
             P('/').Parent().path->MdEqual('/') &&
             P('.').Parent().path->MdEqual('.') &&
             P('').Parent().path->MdEqual('.') &&
-            P('c:/foo/bar/setup.py').Parents()->copy()
-            ->map((_, v) => v.path)->MdEqual([
-                'c:/foo/bar', 'c:/foo', 'c:/'
-            ]) &&
             P('/a/b/c').Parents()->copy()->map((_, v) => v.path)
             ->MdEqual(['/a/b', '/a', '/']) &&
             P('my/library/setup.py').Name()->MdEqual('setup.py') &&
@@ -993,11 +996,14 @@ if 0
             Assert(IsPath('./a')) && Assert(IsPath('../a')) &&
             Assert(IsPath('./a/..')) && Assert(IsPath('../a/..')) &&
             Assert(IsPath('...')) &&
-            Assert(IsPath('C:/')) && Assert(IsPath('C:\\')) &&
-            Assert(IsPath('C:/a')) && Assert(IsPath('C:\\a')) &&
-            Assert(IsPath('C:/a\\..')) && Assert(IsPath('C:\\a/..')) &&
+            Assert(s_win == IsPath('C:/')) &&
+            Assert(s_win == IsPath('C:\\')) &&
+            Assert(s_win == IsPath('C:/a')) &&
+            Assert(s_win == IsPath('C:\\a')) &&
+            Assert(s_win == IsPath('C:/a\\..')) &&
+            Assert(s_win == IsPath('C:\\a/..')) &&
             Assert(IsPath('/tmp')) && Assert(IsPath('/tmp/')) &&
-            Assert(IsPath('/tmp/..')) && Assert(IsPath('/tmp\\..'))
+            Assert(IsPath('/tmp/..')) && Assert(s_win == IsPath('/tmp\\..'))
     enddef
 
     def Test(): void
