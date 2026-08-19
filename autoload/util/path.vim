@@ -337,7 +337,7 @@ export interface Path
 
     def Joinpath(...paths: list<any>): Path
 
-    def Resolve(lower: bool): Path
+    def Resolve(lower: bool = false): Path
 
     def Drive(): string
     def Root(): string
@@ -930,7 +930,7 @@ if 0
         # echo P('c:/').WithName('a.vim')
         # echo P('c:/').WithStem('a')
 
-        return P('/a/b///').Resolve(false)->string()
+        return P('/a/b///').Resolve()->string()
             ->MdEqual('/a/b'->fnamemodify(':p')) &&
             P('a/b/c').path->MdEqual('./a/b/c') &&
             P('/etc/passwd').RelativeTo('/').path->MdEqual('./etc/passwd') &&
