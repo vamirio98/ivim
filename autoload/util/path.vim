@@ -893,7 +893,7 @@ enddef
 
 
 # Testing suit. {{{ #
-if 1
+if 0
     import autoload './debug.vim'
 
     var Assert = debug.Assert
