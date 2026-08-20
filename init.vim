@@ -7,6 +7,7 @@ import autoload './autoload/util/path.vim' as mPath
 # global variable
 g:vcListchars = get(g:, 'vc_listchars', 'tab:\│\ ,trail:.,extends:>,precedes:<')
 g:vcRootmarkers = ['.git', '.svn', '.hg', '.root', '.project']
+g:vcDataDir = mPath.Resolve('~/.local/share/vim/vc')
 g:vcCacheDir = mPath.Resolve('~/.cache/vim/vc')
 g:vcPlugHome = mPath.Resolve('~/.vim/plugged')
 g:vcSwapfileDir = mPath.Resolve('~/.cache/vim/swapfiles')
