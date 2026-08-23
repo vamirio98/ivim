@@ -200,3 +200,9 @@ def ScrollCursorPopup(down: bool): bool
     return true
 enddef
 # }}}
+
+# split window
+nnoremap <space>- <C-w>s
+nnoremap <space><bar> <C-w>v
+# close window
+nnoremap <space>wd <C-w>c
