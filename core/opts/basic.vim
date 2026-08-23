@@ -1,9 +1,5 @@
 vim9script
 
-import autoload 'vc/util/os.vim'
-import autoload 'vc/util/path.vim'
-import autoload 'vc/util/notify.vim'
-
 set nocompatible
 set backspace=indent,eol,start
 set smarttab
@@ -91,7 +87,7 @@ set sidescrolloff=8 # columns of context
 set showmatch
 set matchtime=3
 set list
-exec 'set listchars=' .. g:vc_listchars
+exec 'set listchars=' .. g:vcListchars
 # error format
 set errorformat+=[%f:%l]\ ->\ %m,[%f:%l]:%m
 set shortmess+=WIcC
@@ -105,8 +101,7 @@ if has('gui_running')
     set guioptions-=r  # remove right-hand scrollbar.
     set guioptions-=L  # remove left-hand scrollbar.
     set guioptions-=e  # use a non-GUI tab pages line.
-    set guifont=JetBrainsMonoNL_NFP:h12,JetBrainsMonoNL_NFM:h12,JetBrains_Mono_NL:h12
-    set guifontwide=楷体:h15
+    set guifont=Maple_Mono_NL_NFMono_CN
 endif
 
 set laststatus=2
@@ -131,4 +126,4 @@ set foldtext=foldtext()
 # see :h 'directory'
 # use trailing '//' to make the swapfile name built from the complete path
 # to the file with all path separators substituted to percent '%' signs
-exec 'set directory=' .. path.Path.new(g:vc_swapfile_dir).Native() .. '//'
+exec 'set directory=' .. g:vcSwapfileDir .. '//'

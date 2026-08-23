@@ -1,5 +1,7 @@
 vim9script
 
+# no dependence
+
 packadd nohlsearch
 
 packadd hlyank

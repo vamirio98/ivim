@@ -1,6 +1,8 @@
 vim9script
 
-import autoload 'vc/util/notify.vim' as mNotify
+# depend on vc itself
+
+import autoload 'util/msg.vim' as mMsg
 
 
 # auto load change.
@@ -13,7 +15,7 @@ augroup VcCoreAutocmdsExtendAutoRead
                 \ | checktime | endif
     # notification after file change
     au FileChangedShellPost *
-                \ mNotify.Warn('File changed on disk. Buffer reloaded.')
+                \ mMsg.Warn('File changed on disk. Buffer reloaded.')
 augroup END
 
 
@@ -67,7 +69,7 @@ def Mkdirp(): void
         if exists('*mkdir')
             mkdir(d, 'p')
         else
-            mNotify.Warn('no mkdir()')
+            mMsg.Warn('no mkdir()')
         endif
     endif
 enddef
