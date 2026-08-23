@@ -76,7 +76,7 @@ export def IsWsl(forceReDetect: bool = false): bool
 enddef
 
 
-export def IsUnix(): bool
+export def IsPosix(): bool
     return !IsWin() && !IsWsl()
 enddef
 # }}} Distinguish OS #

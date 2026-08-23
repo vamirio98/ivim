@@ -1,16 +1,15 @@
 vim9script
 
-import autoload 'vc/util/os.vim'
+import autoload 'util/os.vim' as mOs
 
 if has('clipboard')
     set clipboard^=unnamed,unnamedplus
 endif
 
-if os.IsUnix()
+if has('clipmethod')
     packadd osc52
     set clipmethod+=osc52
-endif
-if (!empty($SSH_TTY) || os.IsWsl())
+elseif (!empty($SSH_TTY) || mOs.IsWsl())
     # let vim clipboard sync with system
     # from https://www.zhihu.com/tardis/zm/ans/2156080913?source_id=1003
     def RawEcho(str: string)
