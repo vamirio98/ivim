@@ -1,17 +1,13 @@
 vim9script
 
-import autoload "vc/util/keymap.vim"
-
-Plug 'svermeulen/vim-yoink'
-
 augroup VcSitePlugYoink
     au!
     au VimEnter * Setup()
 augroup END
 
 def Setup(): void
-    var SetGroup = keymap.SetGroup
-    var SetDesc = keymap.SetDesc
+    # var SetGroup = keymap.SetGroup
+    # var SetDesc = keymap.SetDesc
 
     nmap <C-n> <plug>(YoinkPostPasteSwapBack)
     nmap <C-p> <plug>(YoinkPostPasteSwapForward)
@@ -23,6 +19,6 @@ def Setup(): void
 
     nmap [y <plug>(YoinkRotateBack)
     nmap ]y <plug>(YoinkRotateForward)
-    SetDesc('[y', 'Rotate Back Yank History')
-    SetDesc(']y', 'Rotate Forward Yank History')
+    # SetDesc('[y', 'Rotate Back Yank History')
+    # SetDesc(']y', 'Rotate Forward Yank History')
 enddef

@@ -1,8 +1,5 @@
 vim9script
 
-import autoload "vc/util/string.vim" as str
-import autoload "vc/util/keymap.vim"
-
 g:vcIndentGuideEnabled = get(g:, 'vcIndentGuideEnabled', 1)
 
 g:indent_guides_default_mapping = 0
@@ -13,15 +10,14 @@ g:indent_guides_exclude_buftype = 0
 g:indent_guides_exclude_filetypes = ['help', 'startify', 'nerdtree']
 g:indent_guides_tab_guides = 1
 
-Plug 'preservim/vim-indent-guides'
 
 # {{{ keymap
 def StripListchars(listchars: string): string
     var lc: string = listchars
-    if str.Contains(lc, 'tab:')
+    if stridx(lc, 'tab:') >= 0
         lc = substitute(lc, '\vtab:.{-},', 'tab:\\ \\ ,', '')
     endif
-    if str.Contains(lc, 'lead:')
+    if stridx(lc, 'lead:') >= 0
         lc = substitute(lc, 'lead:.{-},', 'lead:\\ ,', '')
     endif
     return lc
@@ -29,12 +25,12 @@ enddef
 def VcIndentGuidesEnable(): void
     g:vcIndentGuideEnabled = 1
     exec 'IndentGuidesEnable'
-    exec 'set listchars=' .. StripListchars(g:vc_listchars)
+    exec 'set listchars=' .. StripListchars(g:vcListchars)
 enddef
 def VcIndentGuidesDisable(): void
     g:vcIndentGuideEnabled = 0
     exec 'IndentGuidesDisable'
-    exec 'set listchars=' .. g:vc_listchars
+    exec 'set listchars=' .. g:vcListchars
 enddef
 def g:ToggleIndentGuides(): void
     if g:vcIndentGuideEnabled
@@ -44,9 +40,9 @@ def g:ToggleIndentGuides(): void
     endif
 enddef
 
-keymap.SetGroup('<leader>u', 'ui')
-keymap.SetDesc('<leader>ui', 'Toggle Indent Guides')
-nnoremap <leader>ui <Cmd>call g:ToggleIndentGuides()<CR>
+# keymap.SetGroup('<leader>u', 'ui')
+# keymap.SetDesc('<leader>ui', 'Toggle Indent Guides')
+nnoremap <space>ui <Cmd>call g:ToggleIndentGuides()<CR>
 # }}}
 
 g:indent_guides_auto_colors = 0

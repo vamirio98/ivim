@@ -9,15 +9,16 @@ g:vcListchars = get(g:, 'vc_listchars', 'tab:\│\ ,trail:.,extends:>,precedes:<
 g:vcRootmarkers = ['.git', '.svn', '.hg', '.root', '.project']
 g:vcDataDir = mPath.Resolve('~/.local/share/vim/vc')
 g:vcCacheDir = mPath.Resolve('~/.cache/vim/vc')
-g:vcPlugHome = mPath.Resolve('~/.vim/plugged')
+g:vcPlugDir = mPath.Resolve('~/.vim/plugged')
 g:vcSwapfileDir = mPath.Resolve('~/.cache/vim/swapfiles')
 
 mLog.Info('start loading vc...')
 
 # {{{ ensure all directories is exists
 const kDirs = [
+    g:vcDataDir,
     g:vcCacheDir,
-    g:vcPlugHome,
+    g:vcPlugDir,
     g:vcSwapfileDir,
 ]
 for d in kDirs
