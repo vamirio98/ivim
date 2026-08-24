@@ -44,15 +44,19 @@ export interface Widget extends PureWidget
     # width/height is the setting size, if the content size is larger than
     # setting, dispWidth/dispHeight will grow to fit it, otherwise them
     # will be same as width/height
-    var width: number
+    var width: number  # width at limit as this
     var height: number
+    # if true and `width` is non-zero, the `dispWidth` be limit to `width`
+    var wFixed: bool
+    var hFixed: bool
     var dirty: bool
     var id: number
 
-    def SetWidth(width: number): void
-    def SetHeight(height: number): void
     def SetParent(parent: Widget): void
     def SetAlign(align: Align): void
+    def SetWidth(width: number): void
+    def SetHeight(height: number): void
+    def SetSizeFixed(wFixed: bool, hFixed: bool): void
     def SetDirty(dirty: bool): void
     def SetId(id: number): void
 endinterface
