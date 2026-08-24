@@ -29,7 +29,7 @@ endif
 
 augroup VcSitePlugGruvboxMaterial
     au!
-    au VimEnter * Setup()
+    au User VcPlugLoaded Setup()
 augroup END
 
 def Setup(): void
@@ -40,7 +40,8 @@ enddef
 # {{{ update colortheme for lightline
 def UpdateTheme()
     if mPlug.Has('lightline.vim')
-        var dstDir: string = '~/.vim/autoload/lightline/colorscheme/'
+        var dstDir: string =
+            mPath.Resolve('~/.vim/autoload/lightline/colorscheme/')
         if !isdirectory(dstDir)
             silent! mkdir(dstDir, 'p')
         endif

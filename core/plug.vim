@@ -57,14 +57,20 @@ Plug 'kshenoy/vim-signature'
 # IncScript site/plug/floaterm.vim
 # TODO: use myself terminal manager
 
-# IncScript site/plug/git.vim
-# IncScript site/plug/dirvish.vim
+Plug 'tpope/vim-fugitive'
+Plug 'airblade/vim-gitgutter'
+IncScript site/plug/git.vim
 
-# IncScript site/plug/asynctasks.vim
+Plug 'justinmk/vim-dirvish'
+IncScript site/plug/dirvish.vim
 
-# IncScript site/plug/fzf.vim
+Plug 'skywind3000/asyncrun.vim'
+Plug 'skywind3000/asynctasks.vim'
+IncScript site/plug/asynctasks.vim
+
 Plug 'junegunn/fzf'
 Plug 'junegunn/fzf.vim'
+IncScript site/plug/fzf.vim
 
 # Plug 'Yggdroot/LeaderF', { 'do': ':LeaderfInstallCExtension' }
 # Plug 'Yggdroot/LeaderF-marks'
@@ -98,7 +104,10 @@ Plug 'bfrg/vim-cpp-modern'
 
 Plug 'preservim/vim-indent-guides'
 IncScript site/plug/indent_guides.vim
-# IncScript site/plug/lightline.vim
+
+Plug 'itchyny/lightline.vim'
+Plug 'mengelbrecht/lightline-bufferline'
+IncScript site/plug/lightline.vim
 
 Plug 'azabiong/vim-highlighter'
 Plug 'chrisbra/Colorizer'
@@ -108,4 +117,6 @@ Plug 'dstein64/vim-startuptime'
 # initialize plugin system
 plug#end()
 
-# doautocmd <nomodeline> User VcPlugLoaded
+if exists('#User#VcPlugLoaded')
+    doautocmd <nomodeline> User VcPlugLoaded
+endif

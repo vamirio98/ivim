@@ -1,13 +1,8 @@
 vim9script
 
-import autoload "vc/util/keymap.vim"
-import autoload "vc/util/notify.vim"
-import autoload "vc/util/plug.vim"
-import autoload 'vc/tui/highlight.vim' as mHl
+import autoload "util/msg.vim" as mMsg
+# import autoload 'vc/tui/highlight.vim' as mHl
 
-
-Plug 'itchyny/lightline.vim'
-Plug 'mengelbrecht/lightline-bufferline'
 
 # {{{ setting
 set noshowmode
@@ -99,9 +94,9 @@ def SetupColor()
   hi! link VcStlY LightlineRight_normal_1
   hi! link VcStlZ LightlineRight_normal_0
 
-  SetupStlGitSumColor()
-  SetupStlLspDiagColor()
-  SetupStlGitBranchColor()
+  # SetupStlGitSumColor()
+  # SetupStlLspDiagColor()
+  # SetupStlGitBranchColor()
 
   # change tabline color, see:
   # https://github.com/itchyny/lightline.vim/issues/508#issuecomment-694716949
@@ -138,11 +133,11 @@ enddef
 # }}}
 
 # {{{ git summary
-def SetupStlGitSumColor(): void
-    'VcStlGitSumAdd'->mHl.Combine('GitGutterAdd', 'VcStlX')
-    'VcStlGitSumChange'->mHl.Combine('GitGutterChange', 'VcStlX')
-    'VcStlGitSumDelete'->mHl.Combine('GitGutterDelete', 'VcStlX')
-enddef
+# def SetupStlGitSumColor(): void
+#     'VcStlGitSumAdd'->mHl.Combine('GitGutterAdd', 'VcStlX')
+#     'VcStlGitSumChange'->mHl.Combine('GitGutterChange', 'VcStlX')
+#     'VcStlGitSumDelete'->mHl.Combine('GitGutterDelete', 'VcStlX')
+# enddef
 
 def g:VcStlGitSummary(): string
     var [a, m, r] = g:GitGutterGetHunkSummary()
@@ -157,38 +152,25 @@ enddef
 # }}}
 
 # {{{ git branch
-def SetupStlGitBranchColor(): void
-    'VcStlGitBranch'->mHl.Combine('Blue', 'VcStlB')
-enddef
+# def SetupStlGitBranchColor(): void
+#     'VcStlGitBranch'->mHl.Combine('Blue', 'VcStlB')
+# enddef
 def g:VcStlGitBranch(): string
-  if &ft == 'dirvish'
-    return ''
-  else
-    var br = g:FugitiveHead()
-    return len(br) == 0 ? '' :
-      printf('%%#VcStlGitBranch# %%(%s%%)%%#VcStlB#', br)
-  endif
+    if &ft == 'dirvish'
+        return ''
+    else
+        var br = g:FugitiveHead()
+        return len(br) == 0 ? '' :
+            printf('%%#VcStlGitBranch# %%(%s%%)%%#VcStlB#', br)
+    endif
 enddef
 # }}}
 
 # {{{ lsp diag
-def SetupStlLspDiagColor(): void
-    'VcStlLspDiagError'->mHl.Combine('Red', 'VcStlB')
-    'VcStlLspDiagWarn'->mHl.Combine('Yellow', 'VcStlB')
-enddef
-def g:VcStlLspDiag(): string
-  if plug.Has('YouCompleteMe')
-    var error = youcompleteme#GetErrorCount()
-    var warn = youcompleteme#GetWarningCount()
-    return printf('%s%s%s',
-      (error == 0 ? '' :
-        '%#VcStlLspDiagError# ' .. string(error) .. '%#VcStlB#'),
-      (error > 0 && warn > 0 ? ' ' : ''),
-      (warn == 0 ? '' :
-        '%#VcStlLspDiagWarn# ' .. string(warn) .. '%#VcStlB#')
-    )
-  endif
-enddef
+# def SetupStlLspDiagColor(): void
+#     'VcStlLspDiagError'->mHl.Combine('Red', 'VcStlB')
+#     'VcStlLspDiagWarn'->mHl.Combine('Yellow', 'VcStlB')
+# enddef
 # }}}
 
 # {{{ coc-status
@@ -209,54 +191,49 @@ enddef
 # }}}
 
 # {{{ keymap
-var SetGroup: func = keymap.SetGroup
-var SetDesc: func = keymap.SetDesc
 
 nmap H <Plug>lightline#bufferline#go_previous()
 nmap L <Plug>lightline#bufferline#go_next()
 nmap [b <Plug>lightline#bufferline#go_previous()
 nmap ]b <Plug>lightline#bufferline#go_next()
 
-SetGroup('<leader>b', 'buffer')
+# SetGroup('<leader>b', 'buffer')
 
 nmap <leader>bH <Plug>lightline#bufferline#move_first()
-SetDesc('<leader>bH', 'Reorder to First')
+# SetDesc('<leader>bH', 'Reorder to First')
 nmap <leader>bL <Plug>lightline#bufferline#move_last()
-SetDesc('<leader>bL', 'Reorder to Last')
+# SetDesc('<leader>bL', 'Reorder to Last')
 
 nmap <leader>bh <Plug>lightline#bufferline#move_previous()
-SetDesc('<leader>bh', 'Reorder to Prev')
+# SetDesc('<leader>bh', 'Reorder to Prev')
 nmap <leader>bl <Plug>lightline#bufferline#move_next()
-SetDesc('<leader>bl', 'Reorder to Next')
+# SetDesc('<leader>bl', 'Reorder to Next')
 
 nmap <leader>br <Plug>lightline#bufferline#reset_order()
-SetDesc('<leader>br', 'Reorder')
+# SetDesc('<leader>br', 'Reorder')
 # }}}
 
-augroup vc_site_plug_lightline
-  au!
-  # wait for colorscheme loaded
-  au VimEnter * SetupColor()
-  # if plug.Has('coc.nvim')
-  #   au User CocStatusChange lightline#update()
-  # endif
-  # if plug.Has('YouCompleteMe')
-  #   au CursorHold * lightline#update()
-  # endif
-  # if plug.Has('vim-gutentags')
-  #   au User GutentagsUpdating lightline#update()
-  #   au User GutentagsUpdated lightline#update()
-  # endif
-  au FileType dirvish lightline#update()
-  au User GitGutter lightline#update()
+augroup VcSitePlugLightline
+    au!
+    # wait for colorscheme loaded
+    au VimEnter * SetupColor()
+    # if plug.Has('coc.nvim')
+    #   au User CocStatusChange lightline#update()
+    # endif
+    # if plug.Has('vim-gutentags')
+    #   au User GutentagsUpdating lightline#update()
+    #   au User GutentagsUpdated lightline#update()
+    # endif
+    au FileType dirvish lightline#update()
+    au User GitGutter lightline#update()
 
-  # update bufferline when buffer list change, or a deleted buffer may remain
-  # in bufferline
-  if has('timers')
-    def ReloadBufline(timer: any)
-      lightline#bufferline#reload()
-    enddef
-    au BufDelete * if timer_start(200, function('ReloadBufline')) == -1
-      | notify.Error('cannot refresh bufferline') | endif
-  endif
+    # update bufferline when buffer list change, or a deleted buffer may remain
+    # in bufferline
+    if has('timers')
+        def ReloadBufline(timer: any)
+            lightline#bufferline#reload()
+        enddef
+        au BufDelete * if timer_start(200, function('ReloadBufline')) == -1
+            | mMsg.Error('cannot refresh bufferline') | endif
+    endif
 augroup END

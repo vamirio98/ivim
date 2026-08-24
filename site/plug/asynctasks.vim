@@ -1,24 +1,19 @@
 vim9script
 
-import autoload "vc/util/path.vim" as mPath
-import autoload "vc/util/os.vim" as mOs
-# import autoload "vc/util/plug.vim"
-# import autoload "vc/util/keymap.vim"
+import autoload "util/path.vim" as mPath
+import autoload "util/os.vim" as mOs
 
 g:asynctasks_extra_config = get(g:, 'asynctasks_extra_config', [])
 g:asynctasks_extra_config += [
-  mPath.Resolve(mPath.Joinpath(g:vc_home,
-    'site/third_party/asynctasks/tasks.ini')
-  )
+    mPath.Resolve(mPath.Joinpath(g:vcHome,
+        'site/third_party/asynctasks/tasks.ini')
+    )
 ]
 
 g:asyncrun_open = 6
-g:asyncrun_rootmarks = g:vc_rootmarkers
+g:asyncrun_rootmarks = g:vcRootmarkers
 g:asyncrun_shell = mOs.IsWin() ? 'bash' : 'pwsh'
 g:asynctasks_rtp_config = "asynctasks.ini"
-
-Plug 'skywind3000/asyncrun.vim'
-Plug 'skywind3000/asynctasks.vim'
 
 # python will buffer everything written to stdout when running as a backgroup
 # process, this can see the realtime output without calling `flush()`

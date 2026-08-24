@@ -1,14 +1,5 @@
 vim9script
 
-import autoload "vc/util/keymap.vim"
-import autoload "vc/util/plug.vim"
-import autoload "vc/util/interact.vim"
-import autoload "vc/util/python.vim"
-import autoload "vc/util/notify.vim"
-import autoload "vc/util/project.vim"
-import autoload "vc/util/string.vim" as str
-import autoload "vc/util/buffer.vim"
-
 g:gitgutter_map_keys = 0
 
 g:gitgutter_sign_priority = 1
@@ -18,25 +9,22 @@ g:gitgutter_sign_removed = ''
 
 g:gitgutter_close_preview_on_escape = 0
 
-Plug 'tpope/vim-fugitive'
-Plug 'airblade/vim-gitgutter'
 
 augroup VcSitePlugGit
     au!
     au VimEnter * Setup()
+    au FileType diff nnoremap gq <Cmd>close<CR>
 augroup END
+
 
 def Setup(): void
 # map {{{
-    var SetGroup: func = keymap.SetGroup
-    var SetDesc: func = keymap.SetDesc
-
-    SetGroup('<leader>g', 'git')
+    # SetGroup('<leader>g', 'git')
 
     nmap [c <Plug>(GitGutterPrevHunk)
     nmap ]c <Plug>(GitGutterNextHunk)
-    SetDesc('[c', 'Prev Hunk')
-    SetDesc(']c', 'Next Hunk')
+    # SetDesc('[c', 'Prev Hunk')
+    # SetDesc(']c', 'Next Hunk')
 
     # # {{{ git diff base
     # def IsGitRepo(cwd: string = null_string): bool
@@ -139,22 +127,17 @@ def Setup(): void
         silent! wincmd P
     enddef
     nmap <leader>gp <ScriptCmd>PreviewHunk()<CR>
-    SetDesc('<leader>gp', 'Preview Hunk')
+    # SetDesc('<leader>gp', 'Preview Hunk')
 
     command! VcGitHunk  GitGutterQuickFix | LeaderfQuickFix
     nnoremap <leader>gs <Cmd>VcGitHunk<CR>
-    SetDesc('<leader>gs', 'Search Hunk')
+    # SetDesc('<leader>gs', 'Search Hunk')
 
     omap ih <Plug>(GitGutterTextObjectInnerPending)
     omap ah <Plug>(GitGutterTextObjectOuterPending)
     xmap ih <Plug>(GitGutterTextObjectInnerVisual)
     xmap ah <Plug>(GitGutterTextObjectOuterVisual)
-    SetDesc('ih', 'Inner Hunk', 'v')
-    SetDesc('ah', 'Outer Hunk', 'v')
-
-    augroup vc_site_plug_git
-    au!
-    au FileType diff nnoremap gq <Cmd>close<CR>
-    augroup END
+    # SetDesc('ih', 'Inner Hunk', 'v')
+    # SetDesc('ah', 'Outer Hunk', 'v')
 # }}}
 enddef

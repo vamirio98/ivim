@@ -52,16 +52,17 @@ if !empty(s_missDeps)
     mMsg.Error($'no [{s_missDeps}] be found in $PATH, some plugins may broken')
 endif
 
-# IncScript core/options.vim
-# IncScript core/opts/basic.vim
-# IncScript core/keymap/basic.vim
-# IncScript core/opts/copy.vim
-# IncScript core/ignores.vim
-# IncScript core/plug.vim
+IncScript core/opts/basic.vim
+IncScript core/opts/copy.vim
+IncScript core/keymap/basic.vim
+IncScript core/ignores.vim
+IncScript core/plug.vim
 # IncScript core/keymap/extend.vim
-# IncScript core/autocmds/basic.vim
-# IncScript core/autocmds/extend.vim
+IncScript core/autocmds/basic.vim
+IncScript core/autocmds/extend.vim
 
-# doautocmd <nomodeline> User VcLoadPost
+if exists('#User#VcLoaded')
+    doautocmd <nomodeline> User VcLoaded
+endif
 
 mLog.Info('finish loading vc')

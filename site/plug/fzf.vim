@@ -1,10 +1,9 @@
 vim9script
 
-import autoload "vc/util/keymap.vim" as mKeymap
-import autoload "vc/util/project.vim" as mProj
-import autoload 'vc/util/python.vim' as mPython
-import autoload 'vc/util/notify.vim' as mNotify
-import autoload 'vc/util/string.vim' as mString
+import autoload "util/proj.vim" as mProj
+import autoload 'tool/python.vim' as mPython
+import autoload 'util/msg.vim' as mMsg
+import autoload 'util/str.vim' as mStr
 
 g:fzf_vim = get(g:, 'fzf_vim', {})
 
@@ -42,7 +41,7 @@ enddef
 def IsGitRepo(a_dir: string = null_string): bool
     var dir = a_dir == null ? expand('%:h') : a_dir
     var res = mPython.System('git rev-parse --is-inside-work-tree', dir)
-    res = res->split("\n")[0]->mString.Strip()
+    res = res->split("\n")[0]->mStr.Strip()
     return res == 'true'
 enddef
 
@@ -60,7 +59,7 @@ enddef
 def DoChangeGitDiffBase(line: string): void
     var hash: string = line->split(' ')[0]
     g:gitgutter_diff_base = hash
-    mNotify.Info($'Change git diff base to {hash}')
+    mMsg.Info($'Change git diff base to {hash}')
 enddef
 
 def ChangeGitDiffBase(): void
@@ -74,20 +73,17 @@ noremap <space>gb <scriptcmd>ChangeGitDiffBase()<cr>
 
 def Setup(): void
 # keymap {{{ #
-    var SetGroup: func = mKeymap.SetGroup
-    var SetDesc: func = mKeymap.SetDesc
-
-    SetGroup('<leader>f', 'file')
+    # SetGroup('<leader>f', 'file')
     nnoremap <space>fc <scriptcmd>FindVcFiles()<cr>
-    SetDesc('<space>fc', 'Conf File')
+    # SetDesc('<space>fc', 'Conf File')
     nnoremap <space>ff <scriptcmd>FindProjFiles()<cr>
-    SetDesc('<space>ff', 'File (Project Root)')
+    # SetDesc('<space>ff', 'File (Project Root)')
     nnoremap <space>fF <cmd>Files .<cr>
-    SetDesc('<space>fF', 'File (Cwd)')
+    # SetDesc('<space>fF', 'File (Cwd)')
     nnoremap <space>fr <cmd>History<cr>
-    SetDesc('<space>fr', 'Recent Files')
+    # SetDesc('<space>fr', 'Recent Files')
 
-    SetGroup('<space>s', 'search')
+    # SetGroup('<space>s', 'search')
 
     # TODO: gtags
     nnoremap <space>sb <cmd>Buffers<cr>
