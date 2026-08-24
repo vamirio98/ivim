@@ -2,7 +2,7 @@ vim9script
 
 # From https://github.com/girishji/vimcomplete/
 
-import autoload './util.vim'
+import autoload './util.vim' as mUtil
 
 export var options: dict<any> = {
     dup: true,
@@ -46,9 +46,9 @@ export def Completor(findstart: number, base: string): any
         var ud = v.user_data
         if type(ud) == v:t_dict
             if !v->has_key('kind_hlgroup')
-                v.kind_hlgroup = util.GetKindHighlightGroup(ud->get('kind', ''))
+                v.kind_hlgroup = mUtil.GetKindHighlightGroup(ud->get('kind', ''))
             endif
-            v.kind = ud->has_key('kind') ? util.GetItemKindValue(ud.kind) : ''
+            v.kind = ud->has_key('kind') ? mUtil.GetItemKindValue(ud.kind) : ''
         endif
         return v
     })

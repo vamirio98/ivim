@@ -2,7 +2,7 @@ vim9script
 
 # From https://github.com/girishji/vimcomplete/
 
-import autoload '../util/notify.vim'
+import autoload 'util/msg.vim' as mMsg
 
 export var defaultKindItems = [
     # text, symbol, icon
@@ -68,7 +68,7 @@ export def GetItemKindValue(kind: any): string
         kindValue = kind
     endif
     if !defaultKinds->has_key(kindValue)
-        notify.Error($'cmp: {kindValue} not found in dict')
+        mMsg.Error($'cmp: {kindValue} not found in dict')
         return ''
     endif
     # icon + text

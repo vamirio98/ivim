@@ -2,13 +2,12 @@ vim9script
 
 # From https://github.com/girishji/vimcomplete/
 
-import autoload './util.vim'
-import autoload '../util/notify.vim'
-import autoload '../util/os.vim'
-import autoload '../util/path.vim'
+import autoload './util.vim' as mUtil
+import autoload 'util/msg.vim' as mMsg
+import autoload 'util/path.vim' as mPath
 # import autoload '../util'
 
-type Path = path.Path
+# type Path = path.Path
 
 export var opts: dict<any> = {
     enable: true,
@@ -101,8 +100,7 @@ export def Completor(findstart: number, base: string): any
     if findstart
         var line = getline('.')->strpart(0, col('.') - 1)
         var prefix = line->matchstr('\f\+$')
-        var p = path.Path.new(prefix)
-        if prefix->empty() || p.IsUnc() || p.IsProtocol()
+        if prefix->empty() || !mPath.IsPath(prefix)
             return -2
         endif
         return col('.') - (strlen(prefix) + 1)
@@ -112,11 +110,11 @@ export def Completor(findstart: number, base: string): any
     var cItems = []
     var dirChanged: bool = false
     try
-        if options.bufRelPath && base =~ ('^\v\.\.?' .. path.sepPat) &&
+        if options.bufRelPath && base =~ ('^\v\.\.?' .. mPath.SepPat()) &&
                 !bufInCwd
             # not already in buffer dir, change directory to get
             # completions for paths relative to current buffer dir
-            os.ChdirNoAutocmd(bufDir)
+            mPath.ChdirNoAutocmd(bufDir)
             dirChanged = true
         endif
 
@@ -134,22 +132,22 @@ export def Completor(findstart: number, base: string): any
             var cItem = item
             var itemLen = len(item)
             var isDir = IsDir(item)
-            if isDir && item[itemLen - 1] == path.sep
+            if isDir && item[itemLen - 1] == mPath.Sep()
                 cItem = item->slice(0, itemLen - 1)
             endif
             cItems->add({
                 word: cItem,
-                abbr: cItem->path.Name() .. (isDir && options.showPathSepAtEnd ? '/' : ''),
-                kind: util.GetItemKindValue(isDir ? 'Folder' : 'File'),
-                kind_hlgroup: util.GetKindHighlightGroup(isDir ? 'Folder' : 'File'),
+                abbr: cItem->mPath.Name() .. (isDir && options.showPathSepAtEnd ? '/' : ''),
+                kind: mUtil.GetItemKindValue(isDir ? 'Folder' : 'File'),
+                kind_hlgroup: mUtil.GetKindHighlightGroup(isDir ? 'Folder' : 'File'),
             })
         endfor
     catch
         # on MacOS it does not complete /tmp/* (throws E344, looks for /prevate/tmp/...)
-        notify.Error(v:exception)
+        mMsg.Error(v:exception)
     finally
         if dirChanged
-            os.ChdirNoAutocmd(cwd)
+            mPath.ChdirNoAutocmd(cwd)
         endif
     endtry
     # echo t->reltime()->reltimestr()
@@ -157,16 +155,16 @@ export def Completor(findstart: number, base: string): any
 enddef
 
 def UpdateCwd(): void
-    cwd = path.Resolve('.')
-    bufInCwd = path.IsSamefile(cwd, bufDir)
+    cwd = mPath.Resolve('.')
+    bufInCwd = mPath.IsSamefile(cwd, bufDir)
 enddef
 
 def UpdateBufDir(): void
-    bufDir = path.Resolve('%')
-    if !path.IsDir(bufDir)
-        bufDir = path.Parent(bufDir)
+    bufDir = fnamemodify(expand('%'), ':p')
+    if !mPath.IsDir(bufDir)
+        bufDir = mPath.Parent(bufDir)
     endif
-    bufInCwd = path.IsSamefile(cwd, bufDir)
+    bufInCwd = mPath.IsSamefile(cwd, bufDir)
 enddef
 
 UpdateCwd()
