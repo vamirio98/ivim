@@ -147,12 +147,16 @@ export def IsPath(a_path: string): bool
     return a_path =~ '\v^\f+$'
 enddef
 
-export def IsFile(a_path: string): bool
-    return getftype(a_path) == 'file'
+export def IsFile(a_path: string, followSymlinks: bool = true): bool
+    var ftype: string = getftype(a_path)
+    return ftype == 'file'
+        || (followSymlinks && ftype == 'link' && filereadable(a_path))
 enddef
 
-export def IsDir(a_path: string): bool
-    return getftype(a_path) == 'dir'
+export def IsDir(a_path: string, followSymlinks: bool = true): bool
+    var ftype: string = getftype(a_path)
+    return ftype == 'dir' ||
+        (followSymlinks && ftype == 'link' && isdirectory(a_path))
 enddef
 
 export def IsSymlink(a_path: string): bool
@@ -325,8 +329,8 @@ export interface Path
 
     def AsPosix(lower: bool): string
 
-    def IsFile(): bool
-    def IsDir(): bool
+    def IsFile(followSymlinks: bool = true): bool
+    def IsDir(followSymlinks: bool = true): bool
     def IsSymlink(): bool
     def IsBlockDevice(): bool
     def IsCharDevice(): bool
@@ -416,18 +420,20 @@ export class PosixPath implements Path
     enddef
 
 
-    def IsFile(): bool
+    def IsFile(followSymlinks: bool = true): bool
         if this._ftype == null
             this._ftype = getftype(this.path)
         endif
-        return this._ftype == 'file'
+        return this._ftype == 'file' ||
+            (followSymlinks && this._ftype == 'link' && filereadable(this.path))
     enddef
 
-    def IsDir(): bool
+    def IsDir(followSymlinks: bool = true): bool
         if this._ftype == null
             this._ftype = getftype(this.path)
         endif
-        return this._ftype == 'dir'
+        return this._ftype == 'dir' ||
+            (followSymlinks && this._ftype == 'link' && isdirectory(this.path))
     enddef
 
     def IsSymlink(): bool
@@ -667,18 +673,20 @@ export class WinPath implements Path
     enddef
 
 
-    def IsFile(): bool
+    def IsFile(followSymlinks: bool = true): bool
         if this._ftype == null
             this._ftype = getftype(this.path)
         endif
-        return this._ftype == 'file'
+        return this._ftype == 'file' ||
+            (followSymlinks && this._ftype == 'link' && filereadable(this.path))
     enddef
 
-    def IsDir(): bool
+    def IsDir(followSymlinks: bool = true): bool
         if this._ftype == null
             this._ftype = getftype(this.path)
         endif
-        return this._ftype == 'dir'
+        return this._ftype == 'dir' &&
+            (followSymlinks && this._ftype == 'link' && isdirectory(this.path))
     enddef
 
     def IsSymlink(): bool
