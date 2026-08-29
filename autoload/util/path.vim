@@ -685,7 +685,7 @@ export class WinPath implements Path
         if this._ftype == null
             this._ftype = getftype(this.path)
         endif
-        return this._ftype == 'dir' &&
+        return this._ftype == 'dir' ||
             (followSymlinks && this._ftype == 'link' && isdirectory(this.path))
     enddef
 
