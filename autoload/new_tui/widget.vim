@@ -6,7 +6,7 @@ import autoload 'util/str.vim' as mStr
 export interface BgWidget
     var id: number
     var parent: BgWidget
-    var image: list<string>
+    var image: list<string>  # each line should have the same length
     var row: number
     var col: number
     var w: number
@@ -30,7 +30,7 @@ export interface Widget extends BgWidget
     # anything that BgWidget has
     var id: number
     var parent: BgWidget
-    var image: list<string>
+    var image: list<string>  # each line should have the same length
     var row: number
     var col: number
     var w: number
@@ -91,7 +91,7 @@ export class StaticWidget implements BgWidget
     var h: number = 0
     var prop: list<any> = []
 
-    var _prop: list<any> = []  # relative to self, prop = (x, y) + _prop
+    var _rprop: list<any> = []  # relative to self, prop = (x, y) + _rprop
     var _dirty: bool = 1
 
     def SetId(id: number): void
@@ -124,8 +124,8 @@ export class StaticWidget implements BgWidget
     enddef
 
     def SetProp(prop: list<any>): void
-        this._prop = deepcopy(prop)
-        this._ditry = 1
+        this._rprop = deepcopy(prop)
+        this._dirty = 1
     enddef
 
     # call twice when render, first, calculate the size of itself;
@@ -137,17 +137,97 @@ export class StaticWidget implements BgWidget
 
         if first
             this.h = len(this.image)
-            var w = 0
-            for line in this.image
-                w = max([w, mstr.DispLen(line)])
-            endfor
-            this.w = w
+            this.w = this.h > 0 ? mStr.DispLen(this.image[0]) : 0
 
             return
         endif
 
-        this.prop = MoveProp(this._prop, this.row, this.col)
+        this.prop = MoveProp(this._rprop, this.row, this.col)
 
         this._dirty = 0
     enddef
 endclass
+
+
+def PadImage(a_image: list<string>, nlpad: number, nrpad: number,
+        ntpad: number, nbpad: number): list<string>
+    var image: list<string> = []
+    var lpad: string = ' '->repeat(nlpad)
+    var rpad: string = ' '->repeat(nrpad)
+    var lineLen: number = nlpad + nrpad +
+        (empty(a_image) ? 0 : mStr.DispLen(a_image[0]))
+    var line: string = ' '->repeat(lineLen)
+
+    for l in a_image
+        image->add(lpad .. l .. rpad)
+    endfor
+    image = [line]->repeat(ntpad) + image + [line]->repeat(nbpad)
+
+    return image
+enddef
+
+
+# {align}: 'center', 'top', 'bottom', 'left', 'right'
+# return: (image, drow, dcol)
+export def BuildImage(a_image: list<string>, a_w: number, a_h: number,
+        align: string): tuple<list<string>, number, number>
+    var drow: number = 0
+    var dcol: number = 0
+    var oh = len(a_image)
+    var ow = oh > 0 ? mStr.DispLen(a_image[0]) : 0
+    if oh > a_h || ow > a_w
+        throw '`image` is too large'
+    endif
+
+    var nlpad: number = 0
+    var nrpad: number = 0
+    var ntpad: number = 0
+    var nbpad: number = 0
+    if align == 'center'
+        if ow < a_w
+            nlpad = (a_w - ow) / 2
+            nrpad = (a_w - ow - nlpad)
+            dcol = nlpad
+        endif
+        if oh < a_h
+            ntpad = (a_h - oh) / 2
+            nbpad = (a_h - oh - ntpad)
+            drow = ntpad
+        endif
+    elseif align == 'top'
+        if ow < a_w
+            nlpad = (a_w - ow) / 2
+            nrpad = (a_w - ow - nlpad)
+            dcol = nlpad
+        endif
+        nbpad = a_h - oh
+    elseif align == 'bottom'
+        if ow < a_w
+            nlpad = (a_w - ow) / 2
+            nrpad = (a_w - ow - nlpad)
+            dcol = nlpad
+        endif
+        ntpad = a_h - oh
+        drow = ntpad
+    elseif align == 'left'
+        if oh < a_h
+            ntpad = (a_h - oh) / 2
+            nbpad = (a_h - oh - ntpad)
+            drow = ntpad
+        endif
+    elseif align == 'right'
+        if oh < a_h
+            ntpad = (a_h - oh) / 2
+            nbpad = (a_h - oh - ntpad)
+            drow = ntpad
+        endif
+        nlpad = a_w - ow
+        dcol = nlpad
+    else
+        throw $'unsupported align: {align}'
+    endif
+
+    var image = PadImage(a_image, nlpad, nrpad, ntpad, nbpad)
+
+    return (image, drow, dcol)
+enddef
