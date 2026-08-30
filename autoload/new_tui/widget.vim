@@ -149,6 +149,64 @@ export class StaticWidget implements BgWidget
 endclass
 
 
+export class BasicWidget implements Widget
+    # anything that BgWidget has
+    var id: number = -1
+    var parent: BgWidget = null_object
+    var image: list<string> = []
+    var row: number = 0
+    var col: number = 0
+    var w: number = 0
+    var h: number = 0
+    var prop: list<any> = []
+
+    def SetId(id: number): void
+        this.id = id
+    enddef
+
+    def SetParent(parent: BgWidget): void
+        this.parent = parent
+    enddef
+
+    def SetRow(row: number): void
+        this.row = row
+    enddef
+
+    def SetCol(col: number): void
+        this.col = col
+    enddef
+
+    # call twice when render, first, calculate the size of itself;
+    # sencond, calculate the text proprities
+    def Render(first: bool): void
+    enddef
+
+    # Widget own
+    var win: number = -1
+    var buf: number = -1
+    var minW: number = 0
+    var minH: number = 0
+    var maxW: number = 0
+    var maxH: number = 0
+
+    def SetMinW(w: number): void
+        this.minW = w
+    enddef
+
+    def SetMinH(h: number): void
+        this.minH = h
+    enddef
+
+    def SetMaxW(w: number): void
+        this.maxW = w
+    enddef
+
+    def SetMaxH(h: number): void
+        this.maxH = h
+    enddef
+endclass
+
+
 def PadImage(a_image: list<string>, nlpad: number, nrpad: number,
         ntpad: number, nbpad: number): list<string>
     var image: list<string> = []
@@ -162,6 +220,22 @@ def PadImage(a_image: list<string>, nlpad: number, nrpad: number,
         image->add(lpad .. l .. rpad)
     endfor
     image = [line]->repeat(ntpad) + image + [line]->repeat(nbpad)
+
+    return image
+enddef
+
+
+# make image a square
+export def FillImage(a_image: list<string>): list<string>
+    var maxw: number = 0
+    for line in a_image
+        maxw = max(maxw, mStr.DispLen(line))
+    endfor
+
+    var image: list<string> = []
+    for line in a_image
+        image->add(line .. ' '->repeat(maxw - mStr.DispLen(line)))
+    endfor
 
     return image
 enddef
