@@ -1,14 +1,12 @@
 vim9script
 
-finish
-
-import autoload 'vc/tui/highlight.vim' as vhl
+import autoload 'tui/highlight.vim' as mHighlight
 
 # TODO: support multi style border chars, get them from a function
 g:vcTuiBorderChars = get(g:, 'vcTuiBorderChars', ['─', '│', '─', '│', '╭', '╮', '╯', '╰'])
 
-hi! link VcNormal Pmenu
-hi! link VcSel PmenuSel
-vhl.Extend('VcKey', 'Title', 'bold')
-vhl.Extend('VcDisable', 'Comment', {'italic': false})
-vhl.Extend('VcHelp', 'String')
+hi! link VcTuiNormal Pmenu
+hi! link VcTuiSel PmenuSel
+mHighlight.Extend('VcTuiKey', 'Title', 'bold')
+mHighlight.Extend('VcTuiDisable', 'Comment', {'italic': false})
+mHighlight.Extend('VcTuiHelp', 'String')
