@@ -2,6 +2,7 @@ vim9script
 
 import autoload 'util/str.vim' as mStr
 
+
 def ParseExpr(a_expr: string): func: string
     # make `expr` a local variable to avoid it be changed in closure
     const expr = mStr.Strip(a_expr)
@@ -17,7 +18,6 @@ enddef
 
 # see Button.new to get escape rule
 # Note: only support alpha as shortcut
-# Note: if multi '&' found, the first one is used
 # return: (text/Text(), key, keyPos)
 # e.g.:
 #   1) [I] 'hello'
@@ -31,21 +31,25 @@ def ParseText(a_text: any): tuple<string, string, number>
     var pos: number = 0
 
     # text properities' `col` is counted by bytes
+    var newParts = []
     for part in parts
-        var tokens = split(part, '&')
-        if len(tokens) == 0
-            pos += len(part)
-        elseif len(tokens) == 2
-            key = tokens[1][0]
+        var tokens = split(part, '&', 1)
+        if len(tokens) == 2
+            if empty(tokens[1])
+                throw 'an alpha should follow &'
+            elseif key != null
+                throw 'multi & found'
+            endif
+            key = tokens[1][0]->tolower()
             keypos = pos + len(tokens[0])
-            break
-        else
+        elseif len(tokens) > 2
             throw 'multi "&" found'
         endif
+        newParts->add(tokens->join(''))
         pos += len(part)
     endfor
 
-    var text = parts->join('&')
+    var text = newParts->join('&')
     return (text, key, keypos)
 enddef
 
@@ -58,6 +62,7 @@ export class Button
     var _text: string = null_string
     var _T: TextFunc = null_function
     var _Cb: func: void = null_function
+    var id: number = -1
     var help: string = null_string
 
     # {desc} has follow key:
@@ -108,5 +113,9 @@ export class Button
         if this._Cb != null
             this._Cb()
         endif
+    enddef
+
+    def SetId(id: number): void
+        this.id = id
     enddef
 endclass

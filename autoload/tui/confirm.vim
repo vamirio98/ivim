@@ -1,219 +1,215 @@
 vim9script
 
-import autoload './core.vim'
-import autoload './unit.vim'
-import autoload './window.vim'
-import autoload './highlight.vim' as vhl
-import autoload '../util/interact.vim'
-import autoload '../util/string.vim' as str
-import autoload './widget.vim' as mw
-import autoload './layout.vim' as ml
-import autoload './popup.vim' as mp
+import autoload './util.vim' as mUtil
+import autoload './widget.vim' as mWidget
+import autoload './button.vim' as mButton
+import autoload './highlight.vim' as mHighlight
+import autoload 'util/str.vim' as mStr
+import autoload 'util/msg.vim' as mMsg
+
+type Button = mButton.Button
+
+def PrepareHighlight(bnr: number): void
+    prop_type_add('VcTuiKey',
+        { bufnr: bnr, highlight: 'VcTuiKey', priority: 101 })
+    prop_type_add('VcTuiSel',
+        { bufnr: bnr, highlight: 'VcTuiSel', priority: 100 })
+enddef
 
 
-type Unit = unit.Unit
-type Widget = mw.Widget
-type StaticWidget = mw.StaticWidget
-type Align = mw.Align
-type Layout = ml.Layout
-type HBox = ml.HBox
-type VBox = ml.VBox
+# return: (image, highlightPos)
+# highlightPos: [(row, startCol, length, keyCol)]
+def BuildImage(a_text: list<string>,
+        a_btns: list<Button>): tuple<list<string>, list<list<number>>>
 
+    var image: list<string> = []
+    var highlightPos: list<list<number>> = []
+    image->extend(a_text)
+    image->add('')
 
-class BtnLine extends HBox
-    static const kMinBtnWidth = 6
+    var row = len(image) + 1
+    var line: string = '    '
+    var offset: number = len(line)
+    for btn in a_btns
+        var [text, key, keypos] = btn.Content()
+        text = $'<{text}>'
+        line = line .. $' {text}'
+        var startCol = offset + 2
+        if key == null
+            highlightPos->add([row, startCol, len(text), -1])
+        else
+            var keyCol = startCol + (keypos + 1)
+            highlightPos->add([row, startCol, len(text), keyCol])
+        endif
+        offset = len(line)
+    endfor
 
-    def new(parent: Layout, choices: string)
-        this.parent = parent
-        this.align = Align.Right
+    var maxW: number = 0
+    for tmp in image
+        maxW = max([maxW, mStr.DispLen(tmp)])
+    endfor
 
+    var ll = mStr.DispLen(line)
+    if ll < maxW
+        var nlpad = maxW - ll
+        line = repeat(' ', ll) .. line
+        for hp in highlightPos
+            hp[1] += nlpad
+            if hp[3] > 0
+                hp[3] += nlpad
+            endif
+        endfor
+    endif
+    image->add(line)
+
+    return (image, highlightPos)
+enddef
+
+export class Dialog extends mWidget.BasicWidget
+    var btns: list<Button> = []
+    var keymap: dict<string> = null_dict
+    var running: bool = 1
+    var choice: number = 0
+    var highlightPos: list<list<number>> = []
+    var _dirty: bool = true
+
+    def new(a_text: string, a_btns: list<string>, a_default: number = 1)
+        for i in a_btns->len()->range()
+            var tmp = Button.new([a_btns[i], () => {
+                this.choice = i
+                this.running = 0
+                popup_close(this.win)
+            }])
+            this.btns->add(tmp)
+        endfor
+
+        this.keymap = mUtil.Keymap()
         var i = 1
-        for ch in str.List(choices)
-            var btn = Unit.new($'<{ch}>')
-            btn.SetAlign(Align.Center)
+        for btn in this.btns
+            var [_, key, _] = btn.Content()
+            if key != null
+                this.keymap[key] = $'ACCEPT:{i}'
+            endif
             btn.SetId(i)
-            btn.SetWidth(btn.dispWidth + 2)
-            this.AddWidget(btn)
             i += 1
         endfor
-    enddef
-endclass
 
+        this.choice = a_default
 
-class Dialog extends VBox
-    var _winid: number = -1
-    var _btns: BtnLine = null_object
-    var _quit: bool = false
-    var _keymap: dict<string> = null_dict
-    var _curIndex: number = 0
+        var width: number = &columns * 40 / 100
 
-    # {question} should be string | list<string>
-    def new(question: any, choices: string = "&Yes\n&No\n&Cancel",
-            default: number = 1, title: string = 'Confirm')
-        this.width = 30
-
-        var opts: dict<any> = {
-            title: $' {title} ',
-        }
-
-        var quesWidget = StaticWidget.new(this)
-        quesWidget.SetImage((str.List(question) + [''])->mw.FillImage())
-        quesWidget.SetAlign(Align.Left)
-        this.AddWidget(quesWidget)
-
-        this._btns = BtnLine.new(this, choices)
-        this.AddWidget(this._btns)
-        var maxWidth = max([quesWidget.dispWidth,
-            this._btns.dispWidth, this.width])
-        quesWidget.SetWidth(maxWidth)
-        this._btns.SetWidth(maxWidth)
-
-        this.Render()
-
-        this._keymap = core.Keymap(true)
-        for b in this._btns.widgets
-            var btn = <Unit>b
-            if btn.key != null
-                this._keymap[tolower(btn.key)] = $'ACCEPT:{btn.id}'
-            endif
-        endfor
-
-        this._curIndex = default
-        opts = this._InitPopupOpts(this.image, opts)
-        this._winid = popup_create(this.image, opts)
-
-        this._PrepareHl()
-    enddef
-
-
-    def _Callback(winid: number, result: any): void
-        this._quit = true
-        vhl.CursorShow()
-    enddef
-
-
-    def _InitPopupOpts(what: list<string>, opts: dict<any>): dict<any>
-        var popupOpts: dict<any> = opts->deepcopy()
-
-        popupOpts->extend(mp.CalSize(what, {
-            minwidth: this.width,
-            maxwidth: &columns * 80 / 100,
-        }))
-        popupOpts->extend({
-            wrap: 0,
+        var opts = {
+            maxwidth: width,
+            maxheight: &lines * 40 / 100,
+            wrap: 1,
             cursorline: 0,
-            drag: 0,
-            close: 'button',
+            close: 'none',
             border: [ 1, 1, 1, 1 ],
             borderchars: g:vcTuiBorderChars,
-            padding: [ 0, 0, 0, 0 ],
             callback: this._Callback,
-        })
+            hide: 1,
+        }
 
-        return popupOpts
+        [this.image, this.highlightPos] = BuildImage(a_text->split("\n"),
+            this.btns)
+
+        this.win = popup_create(this.image, opts)
+        this.buf = winbufnr(this.win)
+
+        PrepareHighlight(this.buf)
     enddef
 
-
-    def _PrepareHl(): void
-        vhl.Clear('VcKeyNoSel')
-        vhl.Clear('VcKeySel')
-
-        vhl.Extend('VcKeyNoSel', 'VcKey')
-        vhl.Extend('VcKeySel', 'VcSel', 'bold')
+    def _Callback(win: number, result: any): void
+        this.running = 0
+        mHighlight.CursorShow()
     enddef
 
-    def Render(): void
-        super.Render()
-        var cmds: list<string> = [vhl.ClearCmd()]
-        for [k, v] in this.colors->items()
-            for r in v
-                if r[2] == 'VcFcPadding'
-                    continue
-                endif
-                var row = str2nr(k) + 1
-                var c: string
-                if r[3] == this._curIndex
-                    c = r[2] == 'VcFcKey' ? 'VcKeySel' : 'VcSel'
-                else
-                    c = r[2] == 'VcFcKey' ? 'VcKeyNoSel' : 'VcNormal'
-                endif
-                cmds->add(vhl.RegionCmd(c, row, r[0] + 1, row, r[1] + 1))
-            endfor
-        endfor
-        window.Exec(this._winid, cmds)
-    enddef
+    def Render(first: bool = true): void
+        if !this._dirty
+            return
+        endif
 
-    def Exec(): number
-        var accept = 0
-        const size = this._btns.widgets->len()
-        while true
-            this.Render()
-            redraw
+        prop_clear(1, line('$', this.win), { bufnr: this.buf })
+        for i in this.btns->len()->range()
+            var btn = this.btns[i]
+            var hp = this.highlightPos[i]
 
-            var ch = interact.Getchar(0)
-            if ch == nr2char(0)
-                continue
+            if this.choice == btn.id
+                prop_add(hp[0], hp[1],
+                    { type: 'VcTuiSel', length: hp[2], bufnr: this.buf })
             endif
-            # NOTE: popup will handle <C-c>, so it will freeze when press
-            # <C-c> until other key press
-            if ch == "\<C-c>" || ch == "\<Esc>" || this._quit
-                accept = 0
+            if hp[3] > 0
+                prop_add(hp[0], hp[3],
+                    { type: 'VcTuiKey', length: 1, bufnr: this.buf })
+            endif
+        endfor
+
+        this._dirty = false
+    enddef
+
+    def Run(): number
+        popup_show(this.win)
+        var size = len(this.btns)
+
+        while this.running
+            # TODO: redraw! will flick the screen, but without ! text
+            # proprities changes may no been seen
+            if this._dirty
+                this.Render()
+                redraw!
+            endif
+
+            var ch: string
+            try
+                var c = getchar()
+                ch = type(c) == v:t_string ? c : nr2char(c)
+            catch
+                mMsg.Error(v:exception)
+                ch = 'ESC'
+            endtry
+
+            this._dirty = true
+            ch = this.keymap->get(ch, ch)
+            if ch == 'ESC' || ch == "\<C-c>" || !this.running
+                this.choice = 0
                 break
-            elseif ch == "\<space>" || ch == "\<cr>"
-                accept = this._curIndex
+            elseif ch == 'ENTER' || ch == "\<space>" || ch == "\<cr>"
                 break
             else
-                var key = this._keymap->get(ch, ch)
-                if key =~ '^ACCEPT:'
-                    key = key->strpart(7)
-                    accept = str2nr(key)
+                if ch =~ '^ACCEPT:'
+                    ch = ch->strpart(7)
+                    this.choice = str2nr(ch)
                     break
-                elseif key == 'LEFT'
-                    if this._curIndex > 1
-                        this._curIndex -= 1
-                    endif
-                elseif key == 'RIGHT'
-                    if this._curIndex < size
-                        this._curIndex += 1
-                    endif
-                elseif key == 'HOME' || key == 'UP' || key == 'PAGEUP'
-                    this._curIndex = 1
-                elseif key == 'END' || key == 'DOWN' || key == 'PAGEDOWN'
-                    this._curIndex = size
+                elseif ch == 'LEFT' && this.choice > 1
+                    this.choice -= 1
+                elseif ch == 'RIGHT' && this.choice < size
+                    this.choice += 1
+                elseif this.choice != 1 &&
+                        (ch == 'HOME' || ch == 'UP' || ch == 'PAGEUP')
+                    this.choice = 1
+                elseif this.choice != size &&
+                        (ch == 'END' || ch == 'DOWN' || ch == 'PAGEDOWN')
+                    this.choice = size
+                else
+                    this._dirty = false
                 endif
             endif
         endwhile
 
-        popup_close(this._winid)
+        popup_close(this.win)
 
-        return accept
+        return this.choice
     enddef
 endclass
 
-#---------------------------------------------------------------
-# Open({question} [, {choices} [, {default} [, {title}]]])
-# {choices}: e.g.: '&Yes\n&No\n&Cancel' will generate three
-#                  choices with hot key:
-#                  Yes(Y/y, return 1),
-#                  No(N/n, return 2)
-#                  and Cancel(C/c, return 3).
-#                  If press <Esc> or <C-c>, 0 will return
-#---------------------------------------------------------------
-export def Open(question: string, choices: string = "&Yes\n&No\n&Cancel",
-        default: number = 1, title: string = 'Confirm'): number
-    var win: Dialog = Dialog.new(question, choices, default, title)
-    vhl.CursorHide()
-    return win.Exec()
+
+export def Confirm(text: string, btns: list<string>,
+        default: number = 1): number
+    var dialog = Dialog.new(text, btns, default)
+    return dialog.Run()
 enddef
 
 
-#---------------------------------------------------------------
-# Testing suit.
-#---------------------------------------------------------------
-if 0
-    def Test(): void
-        echo Open('Yes or no?')
-    enddef
-
-    Test()
+if 1
+    echo Confirm('test confirm', ['&Yes', '&No', 'Cancel'])
 endif

@@ -1,30 +1,19 @@
 vim9script
 
-const kAttrList = [
-    'bold',
-    'underline',
-    'reverse',
-    'inverse',  # same as reverse
-    'italic',
-    'standout',  # standout mode is reverse on many terminals, bold on others
-    'nocombine',
-    'NONE',
-]
-
 const kTypeList = [
     'term',
     'cterm',
     'gui',
 ]
 
-# Param: {all}: also clear 'linksto'
-export def Clear(color: string, clearLink: bool = true): void
-    var info = { 'name': color, 'cleared': true }
+
+export def Clear(a_highlight: string, clearLink: bool = true): void
+    var info = { 'name': a_highlight, 'cleared': true }
     if clearLink
         info.linksto = 'NONE'
     endif
     if hlset([info]) < 0
-        throw $'Failed to clear "{color}"'
+        throw $'Failed to clear "{a_highlight}"'
     endif
 enddef
 
@@ -48,6 +37,7 @@ def NormAttr(attr: any): dict<any>
         return opts
     endif
 enddef
+
 
 # Ensure types is a list, not a string
 def NormType(types: any): list<string>
@@ -80,46 +70,47 @@ enddef
 
 # EnableFeature({name}, {feature})
 # Param:
-#   {color}: highlight name
+#   {highlight}: highlight name
 #   {feature}: all feature need to enable, dict or list
 #       if is a dict, all features will be set to specific status
 #       if is a list, all featrues will be enable
 #   {types}: 'term', 'cterm', 'gui'
 #
-# Return: {color}
-export def EnableFeature(color: string, feature: any,
+# Return: {highlight}
+export def EnableFeature(a_highlight: string, feature: any,
         types: any = kTypeList): string
-    var tmp = hlget(color, true)
+    var tmp = hlget(a_highlight, true)
     if tmp->empty()
-        throw $'No color "{color}"'
+        throw $'No highlight "{a_highlight}"'
     endif
     var info = tmp[0]
 
     DoEnableFeature(info, feature, types)
 
-    return color
+    return a_highlight
 enddef
 
 
-export def Extend(newColor: string, color: string, feature: any = {},
+export def Extend(newHighlight: string, highlight: string, feature: any = {},
         types: any = kTypeList): string
-    var tmp = hlget(color, true)
+    var tmp = hlget(highlight, true)
     if tmp->empty()
-        throw $'No color "{color}"'
+        throw $'No highlight "{highlight}"'
     endif
     var info = tmp[0]
 
-    info.name = newColor
+    info.name = newHighlight
     DoEnableFeature(info, feature, types)
 
-    return newColor
+    return newHighlight
 enddef
 
 
-export def Combine(newColor: string, fgColor: string, bgColor: string): string
-    var tmp = hlget(fgColor, true)
+export def Combine(newHighlight: string, fgHighlight: string,
+        bgHighlight: string): string
+    var tmp = hlget(fgHighlight, true)
     var fgInfo = get(tmp, 0, {})
-    tmp = hlget(bgColor, true)
+    tmp = hlget(bgHighlight, true)
     var bgInfo = get(tmp, 0, {})
     for key in ['ctermfg', 'guifg']
         if fgInfo->has_key(key)
@@ -127,27 +118,26 @@ export def Combine(newColor: string, fgColor: string, bgColor: string): string
         endif
     endfor
 
-    bgInfo.name = newColor
+    bgInfo.name = newHighlight
     bgInfo.force = true
     if hlset([bgInfo]) < 0
-        throw $'Failed to combine "{fgColor}" and "{bgColor}"'
+        throw $'Failed to combine "{fgHighlight}" and "{bgHighlight}"'
     endif
 
-    return newColor
+    return newHighlight
 enddef
 
 
-export def ClearCmd(): string
+export def SynClearCmd(): string
     return 'syn clear'
 enddef
 
-
 # NOTE: use character-offset, set {virtcol} to false if need byte-offset
 # NOTE: region format: [col1, col2)
-export def RegionCmd(color: string, row1: number, col1: number,
+export def SynRegionCmd(highlight: string, row1: number, col1: number,
         row2: number, col2: number, virtcol: bool = true): string
     var colMode = virtcol ? 'v' : 'c'
-    var cmd = $'syn region {color} '
+    var cmd = $'syn region {highlight} '
     cmd ..= $'start=/\%{row1}l\%{col1}{colMode}/ '
     cmd ..= $'end=/\%{row2}l\%{col2}{colMode}/'
     return cmd
@@ -168,23 +158,3 @@ export def CursorShow(): void
         hlset(s_guiCursor)
     endif
 enddef
-
-
-if 0
-    def Test(): void
-        hi CurSearch
-        'VcTestHighlight'->Extend('CurSearch', 'underline')
-        hi VcTestHighlight
-        'VcTestHighlight'->EnableFeature('bold')
-        hi VcTestHighlight
-        Clear('VcTestHighlight')
-        hi VcTestHighlight
-        hi Comment
-        hi CursorLine
-        Combine('VcTestHighlight', 'Comment', 'CursorLine')
-            ->EnableFeature({'reverse': false, 'bold': true})
-        hi VcTestHighlight
-    enddef
-
-    Test()
-endif
