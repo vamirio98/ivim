@@ -126,15 +126,18 @@ export def Alloc(): number
 enddef
 
 # {func} will be called as `func(bnr)` when recycle buffer
-export def SetDefer(bnr: number, A_func: func): void
+export def Defer(bnr: number, A_func: func(number): void): void
+    var deferFunc = GetVar(bnr, 'defer', [])
+    deferFunc->add(A_func)
     SetVar(bnr, 'defer', A_func)
 enddef
 
 export def Free(bnr: number): number
-    var F: func = GetVar(bnr, 'defer', null_function)
-    if F != null
+    var deferFunc = GetVar(bnr, 'defer', [])
+    for i in range(len(deferFunc) - 1, 0, -1)
+        var F = deferFunc[i]
         F(bnr)
-    endif
+    endfor
     InitBuffer(bnr)
     s_buffer->add(bnr)
 enddef
