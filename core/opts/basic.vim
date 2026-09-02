@@ -122,7 +122,7 @@ set winminwidth=5
 
 # fold
 exec 'set fillchars=foldopen:,foldclose:,fold:\ ,foldsep:\ ,diff:╱,eob:\ ,vert:\│'
-set foldlevel=0
+set foldlevel=99
 
 set smoothscroll
 set foldmethod=marker

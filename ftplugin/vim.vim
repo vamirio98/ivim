@@ -6,4 +6,4 @@ setlocal softtabstop=4
 setlocal expandtab
 
 setlocal foldmethod=marker
-setlocal foldlevel=0
+setlocal foldlevel=99
