@@ -53,7 +53,6 @@ if !empty(s_missDeps)
 endif
 
 IncScript core/opts/basic.vim
-# IncScript core/opts/copy.vim
 IncScript core/keymap/basic.vim
 IncScript core/ignores.vim
 IncScript core/plug.vim
