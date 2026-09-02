@@ -30,8 +30,8 @@ endif
 # refer: http://www.skywind.me/blog/archives/2021
 if !has('gui_running')
     def SetMetacode(key: string)
-        exec $'set <M-{key}>=\e{key}'
-        exec $'imap \e{key} <M-{key}>'
+        exec $"set <M-{key}>=\e{key}"
+        exec $"imap \e{key} <M-{key}>"
     enddef
     for i in range(10)
         SetMetacode(nr2char(char2nr('0') + i))
