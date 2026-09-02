@@ -61,8 +61,11 @@ Plug 'tpope/vim-fugitive'
 Plug 'airblade/vim-gitgutter'
 IncScript site/plug/git.vim
 
-Plug 'justinmk/vim-dirvish'
-IncScript site/plug/dirvish.vim
+# Plug 'justinmk/vim-dirvish'
+# IncScript site/plug/dirvish.vim
+
+Plug 'lambdalisue/vim-fern'
+IncScript site/plug/fern.vim
 
 Plug 'skywind3000/asyncrun.vim'
 Plug 'skywind3000/asynctasks.vim'
@@ -87,6 +90,9 @@ Plug 'tpope/vim-unimpaired'
 Plug 'svermeulen/vim-yoink'
 IncScript site/plug/yoink.vim
 
+Plug 'ojroques/vim-oscyank', {'branch': 'main'}
+IncScript site/plug/oscyank.vim
+
 # Plug 'ludovicchabant/vim-gutentags'
 # Plug 'skywind3000/gutentags_plus'
 # LoadConf site/plug/tags.vim
@@ -95,7 +101,7 @@ IncScript site/plug/yoink.vim
 Plug 'sainnhe/gruvbox-material'
 IncScript site/plug/gruvbox_material.vim
 
-Plug 'ryanoasis/vim-devicons'
+# Plug 'ryanoasis/vim-devicons'
 
 Plug 'luochen1990/rainbow'
 IncScript site/plug/rainbow.vim
