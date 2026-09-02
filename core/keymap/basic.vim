@@ -100,6 +100,22 @@ nnoremap <M-l> <C-w>l
 if has('terminal') && exists(':terminal') == 2 && has('patch-8.1.1')
     set termwinkey=<C-_>
     tnoremap <M-q> <C-\><C-n>
+
+    if has('clipboard')
+        # it's strange that <C-w> take no effect in vim inter terminal
+        # on Windows, so need to hack
+        def TermSendkeys(): bool
+            term_sendkeys(bufnr(''), @+)
+            return 1
+        enddef
+        tnoremap <expr> <M-v> TermSendkeys() ? '' : ''
+    endif
+
+endif
+
+if has('clipboard')
+    inoremap <M-v> <C-r>+
+    cnoremap <M-v> <C-r>+
 endif
 
 # resize window {{{
