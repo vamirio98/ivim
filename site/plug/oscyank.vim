@@ -1,5 +1,7 @@
 vim9script
 
+g:oscyank_silent = 1
+
 if !has('clipboard_working')
     # In the event that the clipboard isn't working, it's quit likely taht
     # the + and * registers will not be distinct from the unnamed register.
@@ -13,7 +15,7 @@ if !has('clipboard_working')
     def VimOscYankPostCallback(event: any): void
         if index(s_vimOscYankPostRegisters, event.regname) != -1
                 && index(s_vimOscYankOperators, event.operator) != -1
-            OSCYankRegister(event.regname)
+            g:OSCYankRegister(event.regname)
         endif
     enddef
 
