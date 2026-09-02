@@ -104,6 +104,11 @@ if has('gui_running')
     set guifont=Maple_Mono_NL_NFMono_CN
 endif
 
+# let gvim use directx to render to anti flick when :redraw
+if has('directx')
+    set renderoptions=type:directx
+endif
+
 set laststatus=2
 
 set splitbelow # put new windows below current

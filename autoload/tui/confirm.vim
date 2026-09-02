@@ -152,8 +152,9 @@ export class Dialog extends mWidget.BasicWidget
         var size = len(this.btns)
 
         while this.running
-            # TODO: redraw! will flick the screen, but without ! text
-            # proprities changes may no been seen
+            # NOTE: redraw! will flick the screen on windows, but without ! text
+            # proprities changes may no been seen, setting 'renderoptions'
+            # will improve it (only in gvim)
             if this._dirty
                 this.Render()
                 redraw!
