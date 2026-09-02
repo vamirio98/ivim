@@ -57,7 +57,7 @@ IncScript core/opts/copy.vim
 IncScript core/keymap/basic.vim
 IncScript core/ignores.vim
 IncScript core/plug.vim
-# IncScript core/keymap/extend.vim
+IncScript core/keymap/extend.vim
 IncScript core/autocmds/basic.vim
 IncScript core/autocmds/extend.vim
 
