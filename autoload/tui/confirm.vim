@@ -73,7 +73,8 @@ export class Dialog extends mWidget.BasicWidget
     var highlightPos: list<list<number>> = []
     var _dirty: bool = true
 
-    def new(a_text: string, a_btns: list<string>, a_default: number = 1)
+    def new(a_text: string, a_btns: list<string>, a_default: number = 1,
+            a_title: string = null_string)
         for i in a_btns->len()->range()
             var tmp = Button.new([a_btns[i], () => {
                 this.choice = i
@@ -109,6 +110,9 @@ export class Dialog extends mWidget.BasicWidget
             callback: this._Callback,
             hide: 1,
         }
+        if a_title != null
+            opts.title = a_title
+        endif
 
         [this.image, this.highlightPos] = BuildImage(a_text->split("\n"),
             this.btns)
@@ -205,12 +209,12 @@ endclass
 
 
 export def Confirm(text: string, btns: list<string>,
-        default: number = 1): number
-    var dialog = Dialog.new(text, btns, default)
+        default: number = 1, title: string = null_string): number
+    var dialog = Dialog.new(text, btns, default, title)
     return dialog.Run()
 enddef
 
 
-if 1
-    echo Confirm('test confirm', ['&Yes', '&No', 'Cancel'])
+if 0
+    echo Confirm('test confirm', ['&Yes', '&No', 'Cancel'], 1, 'test')
 endif
