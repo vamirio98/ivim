@@ -9,7 +9,7 @@ endif
 g:vc_notify_rest_loaded = 1
 
 # unit: min
-const s_defRestInvl = 1
+const s_defRestInvl = 30
 const s_defRestTime = 1
 
 var s_timer: number = -1
@@ -48,8 +48,8 @@ def Notify(_): void
         return
     endif
 
-    NotifyAfter(get(g:, 'vcNotifyRestInvl', s_defRestInvl))
     var restInvl: number = get(g:, 'vcNotifyRestInvl', s_defRestInvl)
+    NotifyAfter(restInvl)
     mMsg.Info($'Will notify again after {restInvl} min(s)')
 enddef
 

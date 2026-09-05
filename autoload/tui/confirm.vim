@@ -97,11 +97,11 @@ export class Dialog extends mWidget.BasicWidget
 
         this.choice = a_default
 
-        var width: number = &columns * 40 / 100
+        # var width: number = &columns * 40 / 100
 
         var opts = {
-            maxwidth: width,
-            maxheight: &lines * 40 / 100,
+            # maxwidth: width,
+            # maxheight: &lines * 40 / 100,
             wrap: 1,
             cursorline: 0,
             close: 'none',
