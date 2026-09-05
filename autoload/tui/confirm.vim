@@ -33,13 +33,13 @@ def BuildImage(a_text: list<string>,
     for btn in a_btns
         var [text, key, keypos] = btn.Content()
         text = $'<{text}>'
-        line = line .. $' {text}'
-        var startCol = offset + 2
+        line = line .. $' {text} '
+        var startCol = offset + 1
         if key == null
-            highlightPos->add([row, startCol, len(text), -1])
+            highlightPos->add([row, startCol, len(text) + 2, -1])
         else
-            var keyCol = startCol + (keypos + 1)
-            highlightPos->add([row, startCol, len(text), keyCol])
+            var keyCol = startCol + 2 + keypos
+            highlightPos->add([row, startCol, len(text) + 2, keyCol])
         endif
         offset = len(line)
     endfor
