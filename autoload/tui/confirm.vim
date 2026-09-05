@@ -52,7 +52,7 @@ def BuildImage(a_text: list<string>,
     var ll = mStr.DispLen(line)
     if ll < maxW
         var nlpad = maxW - ll
-        line = repeat(' ', ll) .. line
+        line = repeat(' ', nlpad) .. line
         for hp in highlightPos
             hp[1] += nlpad
             if hp[3] > 0
@@ -73,7 +73,7 @@ export class Dialog extends mWidget.BasicWidget
     var highlightPos: list<list<number>> = []
     var _dirty: bool = true
 
-    def new(a_text: string, a_btns: list<string>, a_default: number = 1,
+    def new(a_text: list<string>, a_btns: list<string>, a_default: number = 1,
             a_title: string = null_string)
         for i in a_btns->len()->range()
             var tmp = Button.new([a_btns[i], () => {
@@ -114,8 +114,7 @@ export class Dialog extends mWidget.BasicWidget
             opts.title = a_title
         endif
 
-        [this.image, this.highlightPos] = BuildImage(a_text->split("\n"),
-            this.btns)
+        [this.image, this.highlightPos] = BuildImage(a_text, this.btns)
 
         this.win = popup_create(this.image, opts)
         this.buf = winbufnr(this.win)
@@ -155,6 +154,8 @@ export class Dialog extends mWidget.BasicWidget
         popup_show(this.win)
         var size = len(this.btns)
 
+        this._dirty = true
+
         while this.running
             # NOTE: redraw! will flick the screen on windows, but without ! text
             # proprities changes may no been seen, setting 'renderoptions'
@@ -168,12 +169,13 @@ export class Dialog extends mWidget.BasicWidget
             try
                 var c = getchar()
                 ch = type(c) == v:t_string ? c : nr2char(c)
+            catch /^Vim:Interrupt$/
+                ch = 'ESC'
             catch
                 mMsg.Error(v:exception)
                 ch = 'ESC'
             endtry
 
-            this._dirty = true
             ch = this.keymap->get(ch, ch)
             if ch == 'ESC' || ch == "\<C-c>" || !this.running
                 this.choice = 0
@@ -187,16 +189,18 @@ export class Dialog extends mWidget.BasicWidget
                     break
                 elseif ch == 'LEFT' && this.choice > 1
                     this.choice -= 1
+                    this._dirty = true
                 elseif ch == 'RIGHT' && this.choice < size
                     this.choice += 1
+                    this._dirty = true
                 elseif this.choice != 1 &&
                         (ch == 'HOME' || ch == 'UP' || ch == 'PAGEUP')
                     this.choice = 1
+                    this._dirty = true
                 elseif this.choice != size &&
                         (ch == 'END' || ch == 'DOWN' || ch == 'PAGEDOWN')
                     this.choice = size
-                else
-                    this._dirty = false
+                    this._dirty = true
                 endif
             endif
         endwhile
@@ -208,9 +212,9 @@ export class Dialog extends mWidget.BasicWidget
 endclass
 
 
-export def Confirm(text: string, btns: list<string>,
+export def Confirm(text: any, btns: list<string>,
         default: number = 1, title: string = null_string): number
-    var dialog = Dialog.new(text, btns, default, title)
+    var dialog = Dialog.new(mStr.List(text), btns, default, title)
     return dialog.Run()
 enddef
 

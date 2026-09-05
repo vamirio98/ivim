@@ -1,9 +1,7 @@
 vim9script
 
-finish
-
-import autoload 'vc/util/notify.vim' as mn
-import autoload 'vc/tui/confirm.vim' as mc
+import autoload 'util/msg.vim' as mMsg
+import autoload 'tui/confirm.vim' as mConfirm
 
 if get(g:, 'vc_notify_rest_loaded', 0)
     finish
@@ -11,7 +9,7 @@ endif
 g:vc_notify_rest_loaded = 1
 
 # unit: min
-const s_defRestInvl = 30
+const s_defRestInvl = 1
 const s_defRestTime = 1
 
 var s_timer: number = -1
@@ -25,24 +23,25 @@ def Rest(a_restTime: number): void
     var Cb = (timer) => {
         if restTime <= 0
             timer_stop(timer)
-            mn.Info($'Will notify again after {restInvl} min(s)')
+            mMsg.Info($'Will notify again after {restInvl} min(s)')
             NotifyAfter(restInvl)
             return
         endif
-        mn.Info($'Rest {restTime} s...')
+        mMsg.Info($'Rest {restTime} s...')
         restTime -= 1
     }
     if timer_start(1000, Cb, { repeat: -1 }) < 0
-        mn.Error("Can not setup rest timer.")
+        mMsg.Error("Can not setup rest timer.")
         NotifyAfter(restInvl)
     endif
 enddef
 
 def Notify(_): void
     var restTime = get(g:, 'vcNotifyRestTime', s_defRestTime)
-    var choice = mc.Open(
-        $"You have been using the computer continously \nfor {s_restInvl} min(s), please rest {restTime} min(s)",
-        "&Yes\n&No", 1)
+    var choice = mConfirm.Confirm(
+        [ 'You have been using the computer continously',
+        $'for {s_restInvl} min(s), please rest {restTime} min(s)'],
+        [ '&Yes', '&No' ], 1)
 
     if choice == 1
         Rest(restTime)
@@ -50,6 +49,8 @@ def Notify(_): void
     endif
 
     NotifyAfter(get(g:, 'vcNotifyRestInvl', s_defRestInvl))
+    var restInvl: number = get(g:, 'vcNotifyRestInvl', s_defRestInvl)
+    mMsg.Info($'Will notify again after {restInvl} min(s)')
 enddef
 
 def NotifyAfter(a_min: number): void
@@ -58,14 +59,18 @@ def NotifyAfter(a_min: number): void
         s_timer = -1
     endif
 
-    if !get(g:, 'vcNotifyRestEn', 1) || a_min <= 0
+    if !get(g:, 'vcNotifyRestEn', 1)
         return
+    endif
+
+    if a_min <= 0
+        mMsg.Error('{min} must large than 0')
     endif
 
     s_restInvl = a_min
     s_timer = timer_start(a_min * 60 * 1000, Notify)
     if s_timer < 0
-        mn.Error($"Can not notify after {a_min} min(s)")
+        mMsg.Error($"failed to setup timer")
     endif
 enddef
 
