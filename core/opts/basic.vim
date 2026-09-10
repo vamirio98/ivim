@@ -103,6 +103,7 @@ if has('gui_running')
     set guioptions-=e  # use a non-GUI tab pages line.
     set guifont=Maple_Mono_NL_NFMono_CN
     set guicursor+=a:blinkon0
+    set guioptions+=!
 endif
 
 # let gvim use directx to render to anti flick when :redraw
