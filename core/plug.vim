@@ -38,6 +38,7 @@ Plug 'honza/vim-snippets'
 IncScript site/plug/ultisnips.vim
 
 Plug 'sbdchd/neoformat'
+IncScript site/plug/neoformat.vim
 Plug 'yegappan/lsp'
 IncScript site/plug/lsp.vim
 

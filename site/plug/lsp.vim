@@ -97,7 +97,7 @@ def Setup(): void
     # SetDesc('<space>cC', 'Outgoing Calls')
     nnoremap <space>cd <cmd>LspDiag show<cr>
     # SetDesc('<space>cd', 'Show Diag')
-    nnoremap <space>cf <cmd>LspFormat<cr>
+    # nnoremap <space>cf <cmd>LspFormat<cr>
     # SetDesc('<space>cf', 'Format')
     nnoremap <space>ch <cmd>LspSwitchSourceHeader<cr>
     # SetDesc('<space>ch', 'Switch Header/Source')
