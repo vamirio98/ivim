@@ -1,6 +1,7 @@
 vim9script
 
 import autoload 'tool/option.vim' as mOption
+import autoload 'util/path.vim' as mPath
 
 type Option = mOption.Option
 
@@ -19,13 +20,14 @@ var lspOpts = {
     autoHighlight: false,
     # autoPopulateDiags: false,
     # completionMatcher: 'fuzzy',
-    # hoverFallback: true,
-    # definitionFallback: true,
+    hoverFallback: false,
+    definitionFallback: true,
     omniComplete: true,
     outlineOnRight: true,
     popupBorder: true,
-    semanticHighlight: true,
+    semanticHighlight: false,
     usePopupInCodeAction: true,
+    showDiagWithVirtualText: true,
 }
 
 var defLspServers = [
@@ -48,14 +50,18 @@ var defLspServers = [
         args: [],
     },
     {
-        name: 'pyright',
+        name: 'ty',
         filetype: 'python',
-        path: 'pyright-langserver',
-        args: ['--stdio'],
-        workspaceConfig: {
-        python: {
-            pythonPath: 'python3',
-        },
+        path: 'ty',
+        args: ['server'],
+    },
+    {
+        name: 'vimls',
+        filetype: ['vim'],
+        path: 'vimls',
+        args: [],
+        initializationOptions: {
+            runtimepath: globpath(&runtimepath, '', 0, 1),
         },
     },
 ]
