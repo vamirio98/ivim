@@ -28,6 +28,7 @@ var lspOpts = {
     semanticHighlight: false,
     usePopupInCodeAction: true,
     showDiagWithVirtualText: true,
+    diagVirtualTextWrap: 'truncate',
 }
 
 var defLspServers = [

@@ -21,7 +21,7 @@ endif
 g:vcDataDir = get(g:, 'vcDataDir', resolve(expand('~/.local/share/vim/vc')))
 g:vcProjDir = get(g:, 'vcProjDir', mPath.Joinpath(g:vcDataDir, 'project'))
 # auto update project when leave vim
-g:vcAutoUpdateProj = get(g:, 'vcAutoUpdateProj')
+g:vcAutoUpdateProj = get(g:, 'vcAutoUpdateProj', 1)
 
 var s_dir = g:vcProjDir
 
