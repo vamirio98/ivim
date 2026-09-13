@@ -1,6 +1,4 @@
 vim9script
-
-nnoremap - <cmd>Fern . -reveal=% -drawer<cr>
 nnoremap <space>fb <cmd>Fern . -reveal=% -drawer -toggle<cr>
 
 def SetupMapping(): void

@@ -63,9 +63,8 @@ Plug 'tpope/vim-fugitive'
 Plug 'airblade/vim-gitgutter'
 IncScript site/plug/git.vim
 
-# Plug 'justinmk/vim-dirvish'
-# IncScript site/plug/dirvish.vim
-
+Plug 'justinmk/vim-dirvish'
+IncScript site/plug/dirvish.vim
 Plug 'lambdalisue/vim-fern'
 IncScript site/plug/fern.vim
 

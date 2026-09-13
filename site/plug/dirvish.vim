@@ -11,19 +11,19 @@ def SetupDirvish()
     # if the buffer content changed, the cursor will stay in another file
     # when reenter the same buffer. e.g., toggle hide dot-file or files in
     # a directory have changed
-    b:cur_file = get(b:, 'cur_file', getline('.'))
+    b:vcDirvishCurFile = get(b:, 'vcDirvishCurFile', getline('.'))
     if g:vcDirvishHideDotfile
         exec 'silent! keeppatterns g@\v[\/]\.[^\/]+[\/]?$@d _'
         # add current file again if it's dotfile
-        if match(b:cur_file, '\v[\/]\.[^\/]+[\/]?$') >= 0
-            setline(line('$') + 1, b:cur_file)
+        if match(b:vcDirvishCurFile, '\v[\/]\.[^\/]+[\/]?$') >= 0
+            setline(line('$') + 1, b:vcDirvishCurFile)
         endif
     endif
     # sort filename
     exec 'sort ,^.*[\/],'
-    var cur_file: string = escape(b:cur_file, '.*[]~\')
+    var vcDirvishCurFile: string = escape(b:vcDirvishCurFile, '.*[]~\')
     # locate to current file
-    search(cur_file, 'wc')
+    search(vcDirvishCurFile, 'wc')
 
     nnoremap <silent><buffer> gh <ScriptCmd>ToggleHideDotfile()<CR>
 enddef
@@ -37,6 +37,6 @@ enddef
 augroup vc_site_plug_dirvish
     au!
     au FileType dirvish SetupDirvish()
-    au BufLeave * if &ft == 'dirvish' && exists('b:cur_file')
-        | unlet b:cur_file | endif
+    au BufLeave * if &ft ==# 'dirvish' && exists('b:vcDirvishCurFile')
+        | unlet b:vcDirvishCurFile | endif
 augroup END
