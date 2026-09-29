@@ -17,7 +17,7 @@ g:asynctasks_rtp_config = "asynctasks.ini"
 
 # python will buffer everything written to stdout when running as a backgroup
 # process, this can see the realtime output without calling `flush()`
-$PYTHONUNBUFFERED = 1
+$PYTHONUNBUFFERED = '1'
 
 # {{{ LeaderF integration
 # https://github.com/skywind3000/asynctasks.vim/wiki/UI-Integration
