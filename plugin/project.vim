@@ -299,7 +299,7 @@ if mPlug.Has('fzf.vim')
             source: projs,
             sink: (line) => {
                 var idx: number = line
-                    ->substitute('\v\[.{-}\].+', '\1', '')
+                    ->substitute('\v^\[(.{-})\].*$', '\1', '')
                     ->str2nr()
                 exec 'VcProject load' hist[idx][1]
             },
