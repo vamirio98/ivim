@@ -97,7 +97,9 @@ def Save(a_dir: string, a_name: string): void
     ]
     writefile(body, ini)
     var script = mPath.Joinpath(cfgDir, 'script.vim')
-    delete(script)
+    if mPath.IsFile(script)
+        delete(script)
+    endif
 
     g:thisSession = session
     var err = Persist()

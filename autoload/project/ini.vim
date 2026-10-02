@@ -34,7 +34,7 @@ export def Read(): dict<any>
             elseif t =~ '^[;#].*$'  # comment
                 continue
             elseif t =~ '^\[.*\]$'
-                current = substitute(t, '\v^\[\s*(.\{-})\\s*]$', '\1', '')
+                current = substitute(t, '\v^\[\s*(.{-})\s*\]$', '\1', '')
                 if !has_key(sections, current)
                     sections[current] = {}
                 endif
@@ -53,11 +53,10 @@ export def Read(): dict<any>
                 sections[current][key] = value
             endif
         endfor
+        return sections
     catch
         return null_dict
     endtry
-
-    return null_dict
 enddef
 
 
