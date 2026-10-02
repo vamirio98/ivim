@@ -1,6 +1,6 @@
 vim9script
 
-import autoload "./path.vim" as mPath
+import autoload "util/path.vim" as mPath
 
 
 #----------------------------------------------------------------------

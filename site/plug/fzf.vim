@@ -1,9 +1,11 @@
 vim9script
 
-import autoload "util/proj.vim" as mProj
-import autoload 'tool/python.vim' as mPython
 import autoload 'util/msg.vim' as mMsg
 import autoload 'util/str.vim' as mStr
+
+import autoload 'tool/python.vim' as mPython
+
+import autoload "project/root.vim" as mRoot
 
 g:fzf_vim = get(g:, 'fzf_vim', {})
 
@@ -33,7 +35,7 @@ def FindVcFiles(): void
 enddef
 
 def FindProjFiles(): void
-    var root: string = mProj.Root()
+    var root: string = mRoot.Root()
     exec 'Files' root
 enddef
 
@@ -46,7 +48,7 @@ def IsGitRepo(a_dir: string = null_string): bool
 enddef
 
 def GetCommits(a_dir: string = null_string, reflog: bool = false): list<string>
-    var dir: string = a_dir == null ? mProj.Root() : a_dir
+    var dir: string = a_dir == null ? mRoot.Root() : a_dir
     if !IsGitRepo(dir)
         return []
     endif
