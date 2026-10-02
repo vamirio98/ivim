@@ -288,6 +288,30 @@ def g:VcProjectName(): string
 enddef
 
 
+# fzf integration {{{ #
+if mPlug.Has('fzf.vim')
+    def SearchProject(): void
+        var hist: list<list<string>> = mHistory.Get()
+        var projs: list<string> = hist->mapnew((idx, val) => {
+            return $'[{idx}] {val[0]}'
+        })
+        fzf#run(fzf#wrap({
+            source: projs,
+            sink: (line) => {
+                var idx: number = line
+                    ->substitute('\v\[.{-}\].+', '\1', '')
+                    ->str2nr()
+                exec 'VcProject load' hist[idx][1]
+            },
+        }))
+    enddef
+
+    nnoremap <space>sp <scriptcmd>SearchProject()<cr>
+endif
+# }}} fzf integration #
+
+
+
 augroup VcPluginProject
     au!
     au VimLeavePre * mMsg.Error(Persist())
