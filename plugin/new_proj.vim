@@ -132,16 +132,6 @@ def Load(a_session: string): void
 enddef
 
 
-def Pause(session: string): void
-    if !exists('g:thisSession')
-        mMsg.Error("No project open")
-        return
-    endif
-    mMsg.Warn($'Pausing session in {mPath.Shortpath(session)}')
-    unlet g:thisSession
-enddef
-
-
 def Delete(session: string): void
     if !mPath.IsFile(session)
         mMsg.Error($'No a file: {mPath.Shortpath(session)}')
@@ -177,6 +167,16 @@ def Config(): void
 enddef
 
 
+def Pause(): void
+    if !exists('g:thisSession')
+        mMsg.Error("No project open")
+        return
+    endif
+    mMsg.Warn($'Pausing session in {mPath.Shortpath(g:thisSession)}')
+    unlet g:thisSession
+enddef
+
+
 def Dispatch(action: string, a_param: string = null_string): void
     try
         if action == 'save'
@@ -184,51 +184,22 @@ def Dispatch(action: string, a_param: string = null_string): void
             var name: string = a_param == null ?
                 mPath.Name(mRoot.Root()) : a_param
             Save('.', name)
-            return
         elseif action == 'load'
             # {param} is the session file
             var file: string = a_param != null ? a_param :
                 mPath.Joinpath(mRoot.Root(), '.vim/vc/project/Session.vim')
             Load(file)
-            return
         elseif action == 'delete'
             var file: string = a_param != null ? a_param :
                 mPath.Joinpath(mRoot.Root(), '.vim/vc/project/Session.vim')
             Delete(file)
-            return
         elseif action == 'config'
             Config()
-            return
+        elseif action == 'pause'
+            Pause()
         endif
-        # if action == 'pause'
-        #     Pause(session)
-        #     return
-        # elseif action == 'delete'
-        #     # TODO: also delete it from the record
-        #     if empty(file)
-        #         mMsg.Error("No file specified")
-        #         return
-        #     endif
 
-        #     if !filereadable(file)
-        #         mMsg.Error($'{file} not found')
-        #         return
-        #     endif
-
-        #     if mConfirm.Confirm($'Delete {file}?', ['&Yes', '&No'],
-        #             2, 'Vc Project') != 1
-        #         return
-        #     endif
-
-        #     mMsg.Warn('Deleting session in ' .. fnamemodify(file, ':~:.'))
-        #     delete(file)
-        #     unlet! g:thisSession
-        #     return
-        # else # save or load
-        #     if empty(file)
-        #         file = mPath.Join(mRoot.Root(), g:vcProjectDefPath)
-        #     endif
-        # endif
+        return
     finally
         &l:readonly = &l:readonly
     endtry
