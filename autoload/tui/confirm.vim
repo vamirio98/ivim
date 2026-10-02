@@ -212,7 +212,7 @@ export class Dialog extends mWidget.BasicWidget
 endclass
 
 
-export def Confirm(text: any, btns: list<string>,
+export def Confirm(text: any, btns: list<string> = ['&Yes', '&No'],
         default: number = 1, title: string = null_string): number
     var dialog = Dialog.new(mStr.List(text), btns, default, title)
     return dialog.Run()
