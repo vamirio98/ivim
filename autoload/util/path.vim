@@ -111,7 +111,7 @@ export def AsPosix(a_path: string, lower: bool = false): string
 
     path = DoPrune(path)
 
-    return lower ? path->tolower() : path
+    return (s_win && lower) ? path->tolower() : path
 enddef
 
 
@@ -416,7 +416,7 @@ export class PosixPath implements Path
 
 
     def AsPosix(lower: bool = false): string
-        return lower ? this.path->tolower() : this.path
+        return this.path
     enddef
 
 
