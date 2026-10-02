@@ -3,15 +3,18 @@ vim9script
 # use session to simulate project configuration file
 # inspired by https://github.com/tpope/vim-obsession
 
-import autoload 'util/msg.vim' as mMsg
-import autoload 'util/path.vim' as mPath
-import autoload 'tool/plug.vim' as mPlug
-import autoload 'tui/confirm.vim' as mConfirm
-import autoload 'util/autocmd.vim' as mAutocmd
-
 import autoload 'project/root.vim' as mRoot
 import autoload 'project/ini.vim' as mIni
 import autoload 'project/history.vim' as mHistory
+
+import autoload 'util/msg.vim' as mMsg
+import autoload 'util/path.vim' as mPath
+import autoload 'util/autocmd.vim' as mAutocmd
+import autoload 'util/file.vim' as mFile
+
+import autoload 'tool/plug.vim' as mPlug
+
+import autoload 'tui/confirm.vim' as mConfirm
 
 if exists('g:vcProjectLoaded')
     finish
@@ -177,6 +180,41 @@ def Pause(): void
 enddef
 
 
+def Rename(): void
+    if !exists('g:thisSession')
+        mMsg.Error("No project open")
+        return
+    endif
+
+    var cfg = mIni.Read()
+    var oldName: string = cfg.info.name
+    var newName: string = null_string
+    try
+        inputsave()
+        newName = input('New project name: ', oldName)
+    catch /^Vim:Interrupt$/
+        mMsg.Warn('Interrupt by user, abort')
+        return
+    finally
+        inputrestore()
+    endtry
+
+    if empty(newName)
+        mMsg.Warn('Empty name, abort')
+        return
+    endif
+
+    var ini = mIni.File()
+    var body = readfile(ini)
+    body[1] = $'name = {newName}'
+    mFile.SafeHandle(ini, (fpath) => {
+        writefile(body, fpath)
+    })
+    mMsg.Warn($'Reanme project {oldName} => {newName}')
+    mHistory.Update([newName, g:thisSession])
+enddef
+
+
 def Dispatch(action: string, a_param: string = null_string): void
     try
         if action == 'save'
@@ -197,6 +235,8 @@ def Dispatch(action: string, a_param: string = null_string): void
             Config()
         elseif action == 'pause'
             Pause()
+        elseif action == 'rename'
+            Rename()
         endif
 
         return

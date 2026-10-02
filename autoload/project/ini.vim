@@ -7,13 +7,21 @@ import autoload 'util/msg.vim' as mMsg
 import autoload 'tui/confirm.vim' as mConfirm
 
 
+export def File(): string
+    if !exists('g:thisSession')
+        return null_string
+    endif
+    return ConfigFile()
+enddef
+
+
 def ConfigFile(): string
     var projCfgDir = mPath.Parent(g:thisSession)
     return mPath.Joinpath(projCfgDir, 'project.ini')
 enddef
 
 
-export def Read(): dict<any>
+export def Read(): dict<dict<string>>
     if !exists('g:thisSession')
         return null_dict
     endif
