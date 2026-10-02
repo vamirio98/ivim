@@ -20,8 +20,6 @@ if exists('g:vcProjectLoaded')
     finish
 endif
 g:vcProjectLoaded = 1
-command! ConfigVcProject mIni.Config()
-command! ReadVcProject mIni.Read()
 
 
 g:vcDataDir = get(g:, 'vcDataDir', resolve(expand('~/.local/share/vim/vc')))
@@ -30,7 +28,6 @@ g:vcDataDir = get(g:, 'vcDataDir', resolve(expand('~/.local/share/vim/vc')))
 # 1. Session.vim (must)
 # 2. project.ini (optional) - extra info of project
 # 3. script.vim (optional) - will be executed after session loaded
-g:vcProjectDefDir = '.vim/vc/project'
 
 command! -nargs=* -complete=customlist,Complete VcProject Dispatch(<f-args>)
 
@@ -280,6 +277,14 @@ def Persist(): string
     endtry
 
     return ''
+enddef
+
+
+def g:VcProjectName(): string
+    if !exists('g:thisSession')
+        return ''
+    endif
+    return mIni.Read().info.name
 enddef
 
 
