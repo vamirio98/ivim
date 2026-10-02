@@ -104,7 +104,7 @@ def Save(a_dir: string, a_name: string): void
     g:thisSession = session
     var err = Persist()
     if empty(err)
-        mMsg.Info($'Tracking session in {mPath.Shortpath(g:thisSession)}')
+        mMsg.Info($'Tracking session in {mPath.Shortpath(g:thisSession)}', true)
         v:this_session = g:thisSession
         mHistory.Update([a_name, g:thisSession])
     else
@@ -118,7 +118,7 @@ def Load(a_session: string): void
     bufdo bd
 
     exec 'source' fnameescape(a_session)
-    mMsg.Info($'Tracking session in {mPath.Shortpath(g:thisSession)}')
+    mMsg.Info($'Tracking session in {mPath.Shortpath(g:thisSession)}', true)
     var cfgDir = mPath.Parent(a_session)
     var script = mPath.Joinpath(cfgDir, 'script.vim')
     if mPath.IsFile(script)
