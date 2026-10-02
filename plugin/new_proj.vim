@@ -172,6 +172,11 @@ def Delete(session: string): void
 enddef
 
 
+def Config(): void
+    mIni.Config()
+enddef
+
+
 def Dispatch(action: string, a_param: string = null_string): void
     try
         if action == 'save'
@@ -190,6 +195,9 @@ def Dispatch(action: string, a_param: string = null_string): void
             var file: string = a_param != null ? a_param :
                 mPath.Joinpath(mRoot.Root(), '.vim/vc/project/Session.vim')
             Delete(file)
+            return
+        elseif action == 'config'
+            Config()
             return
         endif
         # if action == 'pause'
