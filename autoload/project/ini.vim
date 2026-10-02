@@ -6,16 +6,15 @@ import autoload 'util/msg.vim' as mMsg
 
 import autoload 'tui/confirm.vim' as mConfirm
 
-import autoload 'project/history.vim' as mHistory
-
 
 def ConfigFile(): string
-    return mPath.Joinpath(g:thisProject, '.vim/vc/project/project.ini')
+    var projCfgDir = mPath.Parent(g:thisSession)
+    return mPath.Joinpath(projCfgDir, 'project.ini')
 enddef
 
 
 export def Read(): dict<any>
-    if !exists('g:thisProject')
+    if !exists('g:thisSession')
         return null_dict
     endif
 
@@ -62,8 +61,8 @@ export def Read(): dict<any>
 enddef
 
 
-export def Config(): void
-    if !exists('g:thisProject')
+def Config(): void
+    if !exists('g:thisSession')
         mMsg.Error('No project open')
         return
     endif

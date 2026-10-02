@@ -1,0 +1,261 @@
+vim9script
+
+# use session to simulate project configuration file
+# inspired by https://github.com/tpope/vim-obsession
+
+import autoload 'util/msg.vim' as mMsg
+import autoload 'util/path.vim' as mPath
+import autoload 'tool/plug.vim' as mPlug
+import autoload 'tui/confirm.vim' as mConfirm
+import autoload 'util/autocmd.vim' as mAutocmd
+
+import autoload 'project/root.vim' as mRoot
+import autoload 'project/ini.vim' as mIni
+import autoload 'project/history.vim' as mHistory
+
+if exists('g:vcProjectLoaded')
+    finish
+endif
+g:vcProjectLoaded = 1
+command! ConfigVcProject mIni.Config()
+command! ReadVcProject mIni.Read()
+
+
+g:vcDataDir = get(g:, 'vcDataDir', resolve(expand('~/.local/share/vim/vc')))
+# the default project path when do not specify the project configuration file,
+# relative to the project root. Some files will be place in the directory:
+# 1. Session.vim (must)
+# 2. project.ini (optional) - extra info of project
+# 3. script.vim (optional) - will be executed after session loaded
+g:vcProjectDefDir = '.vim/vc/project'
+const s_projFile: string = mPath.Joinpath(g:vcDataDir, 'projects')
+
+command! -nargs=* -complete=customlist,Complete VcProject Dispatch(<f-args>)
+
+
+const kActions: list<string> = [ 'save', 'load', 'delete', 'pause', 'rename' ]
+
+
+def Complete(a_argLead: string, a_cmdLine: string,
+        a_cursorPos: number): list<any>
+    var args: list<string> = a_cmdLine->split()[1 :]
+    var argNum: number = args->len()
+    var argLeadLen: number = len(a_argLead)
+
+    if (argLeadLen == 0 && argNum == 0) || (argLeadLen > 0 && argNum == 1)
+        # action
+        return argLeadLen == 0 ? kActions : kActions->matchfuzzy(a_argLead)
+    elseif (argLeadLen == 0 && argNum == 1) || (argLeadLen > 1 && argNum == 2)
+        var action = args[0]
+        if action == 'save'
+            return [ mPath.Name(mRoot.Root()) ]
+        elseif action == 'load' || action == 'delete'
+            # session file, read from history
+            return mHistory.Get()->mapnew((_, value) => {
+                return { word: value[1], abbr: value[0] }
+            })
+        endif
+    endif
+    return []
+enddef
+
+
+def Save(a_dir: string, a_name: string): void
+    var root = mRoot.GetRoot(a_dir)
+    if !mPath.IsSamefile(root, getcwd())
+        if 1 != mConfirm.Confirm(
+                $'Cwd ({mPath.Shortpath(getcwd())} != project root ({mPath.Shortpath(root)})), change to project root?',
+                ['&Yes', '&No'], 1, 'Vc Project')
+            mMsg.Error('Cwd must be project root')
+            return
+        endif
+    endif
+
+    var cfgDir = mPath.Joinpath(root, '.vim/vc/project')
+    if !mPath.IsDir(cfgDir)
+        if 1 != mConfirm.Confirm(
+                $'{mPath.Shortpath(cfgDir)} is not exists, create it?',
+                ['&Yes', '&No'], 1, 'Vc Project')
+            mMsg.Warn('Abort')
+        endif
+        mkdir(cfgDir, 'p')
+    endif
+
+    var ini = mPath.Joinpath(cfgDir, 'project.ini')
+    if !mPath.IsFile(ini)
+        var body = [
+            '[info]',
+            $'name = {a_name}'
+        ]
+        writefile(body, ini)
+    endif
+
+    g:thisSession = mPath.Joinpath(cfgDir, 'Session.vim')
+    var err = Persist()
+    if empty(err)
+        mMsg.Info($'Tracking session in {mPath.Shortpath(g:thisSession)}')
+        v:this_session = g:thisSession
+        mHistory.Update([a_name, g:thisSession])
+    else
+        mMsg.Error(err)
+    endif
+enddef
+
+
+def Load(a_session: string): void
+    # remove all buffers first
+    bufdo bd
+
+    exec 'source' fnameescape(a_session)
+    mMsg.Info($'Tracking session in {mPath.Shortpath(g:thisSession)}')
+    var cfgDir = mPath.Parent(a_session)
+    var script = mPath.Joinpath(cfgDir, 'script.vim')
+    if mPath.IsFile(script)
+        exec 'source' fnameescape(script)
+    endif
+
+    var cfg = mIni.Read()
+    var name: string = (cfg->has_key('info') && cfg.info->has_key('name')) ?
+        cfg.info.name : ''
+    mHistory.Update([name, a_session])
+enddef
+
+
+def Pause(session: string): void
+    if !exists('g:thisSession')
+        mMsg.Error("No project open")
+        return
+    endif
+    mMsg.Warn($'Pausing session in {mPath.Shortpath(session)}')
+    unlet g:thisSession
+enddef
+
+
+def Delete(session: string): void
+    if !mPath.IsFile(session)
+        mMsg.Error($'No a file: {mPath.Shortpath(session)}')
+        return
+    endif
+
+    if mConfirm.Confirm($'Delete {mPath.Shortpath(session)}?', ['&Yes', '&No'],
+            2, 'Vc Project') != 1
+        return
+    endif
+
+    if exists('g:thisSession') && mPath.IsSamefile(session, g:thisSession)
+        unlet! g:thisSession
+    endif
+    delete(session)
+
+    var cfgDir = mPath.Parent(session)
+    if mPath.IsDir(cfgDir)
+        if 1 == mConfirm.Confirm(
+                $'Also delete configuration directory {mPath.Shortpath(cfgDir)}?',
+                ['&Yes', '&No'], 2, 'Vc Project')
+            delete(cfgDir, 'rf')
+        endif
+    endif
+
+    mHistory.Purge()
+    mMsg.Warn($'Delete project {mPath.Shortpath(session)}')
+enddef
+
+
+def Dispatch(action: string, a_param: string = null_string): void
+    try
+        if action == 'save'
+            # {param} is the project root directory
+            var name: string = a_param == null ?
+                mPath.Name(mRoot.Root()) : a_param
+            Save('.', name)
+            return
+        elseif action == 'load'
+            # {param} is the session file
+            var file: string = a_param != null ? a_param :
+                mPath.Joinpath(mRoot.Root(), '.vim/vc/project/Session.vim')
+            Load(file)
+            return
+        elseif action == 'delete'
+            var file: string = a_param != null ? a_param :
+                mPath.Joinpath(mRoot.Root(), '.vim/vc/project/Session.vim')
+            Delete(file)
+            return
+        endif
+        # if action == 'pause'
+        #     Pause(session)
+        #     return
+        # elseif action == 'delete'
+        #     # TODO: also delete it from the record
+        #     if empty(file)
+        #         mMsg.Error("No file specified")
+        #         return
+        #     endif
+
+        #     if !filereadable(file)
+        #         mMsg.Error($'{file} not found')
+        #         return
+        #     endif
+
+        #     if mConfirm.Confirm($'Delete {file}?', ['&Yes', '&No'],
+        #             2, 'Vc Project') != 1
+        #         return
+        #     endif
+
+        #     mMsg.Warn('Deleting session in ' .. fnamemodify(file, ':~:.'))
+        #     delete(file)
+        #     unlet! g:thisSession
+        #     return
+        # else # save or load
+        #     if empty(file)
+        #         file = mPath.Join(mRoot.Root(), g:vcProjectDefPath)
+        #     endif
+        # endif
+    finally
+        &l:readonly = &l:readonly
+    endtry
+enddef
+
+
+def Persist(): string
+    if exists('g:SessionLoad') || !exists('g:thisSession')
+        return ''
+    endif
+
+    var sessionoptions = &sessionoptions
+    var tmpProjFile: string = $'{g:thisSession}.{getpid()}.vcproject~'
+    try
+        set sessionoptions-=blank
+        set sessionoptions-=options
+        set sessionoptions+=tabpages
+        exec mAutocmd.DoautocmdUserCmd('VcProjectPre')
+
+        exec 'mksession!' fnameescape(tmpProjFile)
+        v:this_session = g:thisSession
+
+        var body: list<string> = readfile(tmpProjFile)
+        insert(body, 'g:thisSession = v:this_session', -3)
+        writefile(body, tmpProjFile)
+        rename(tmpProjFile, g:thisSession)
+        exec mAutocmd.DoautocmdUserCmd('VcProject')
+    catch /^Vim(mksession):E11:/
+        return ''
+    catch
+        unlet g:thisSession
+        # trigger to assign to l:readonly, force to refresh statusline
+        &l:readonly = &l:readonly
+        return string(v:exception)
+    finally
+        &sessionoptions = sessionoptions
+        delete(tmpProjFile)
+    endtry
+
+    return ''
+enddef
+
+
+augroup VcPluginProject
+    au!
+    au VimLeavePre * mMsg.Error(Persist())
+    au BufEnter * if !get(g:, 'vcProjectNoBufEnter', 0)
+        | mMsg.Error(Persist()) | endif
+augroup END
