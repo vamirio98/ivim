@@ -61,7 +61,7 @@ export def Read(): dict<any>
 enddef
 
 
-def Config(): void
+export def Config(): void
     if !exists('g:thisSession')
         mMsg.Error('No project open')
         return
@@ -69,24 +69,10 @@ def Config(): void
     var fpath = ConfigFile()
     var newFile: bool = false
     if !mPath.IsFile(fpath)
-        if mConfirm.Confirm('No local project configuration file found, create it?',
-                ['&Yes', '&No'], 1, 'Vc Project') != 1
-            return
-        endif
-        mMsg.Warn($'Creating {fnamemodify(fpath, ':~:.')}')
-        newFile = true
-    endif
-
-    var fdir = fnamemodify(fpath, ':h')
-    if !mPath.IsDir(fdir)
-        mkdir(fdir, 'p')
+        mMsg.Error($'No project configuration file found, create it through ":VcProject save" first')
+        return
     endif
     exec 'silent e' fpath
-    if newFile
-        var bnr: number = bufnr('%')
-        setbufline(bnr, 1, '[info]')
-        setbufline(bnr, 2, 'name = ')
-        exec 'normal! G'
-        :startinsert!
-    endif
+    exec 'normal! G'
+    exec 'normal! $'
 enddef
