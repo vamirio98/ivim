@@ -1,0 +1,56 @@
+*project.txt*                   Vc Project               For Vim version 9.2
+
+==============================================================================
+                                                        *project-overview*
+1. Overview~
+
+Project management for Vim9.
+
+==============================================================================
+                                                        *project-commands*
+2. Commands~
+
+The following commands are provides by this plugin.
+
+							*:VcProject-save*
+:VcProject save {name}		Save current state as the project {name}, if
+				{name} is omitted, the project root directory
+				name will be used.
+
+							*:VcProject-load*
+:VcProject load {file}		Load project file (use Vim session file as the
+				project file), also load `script.vim` who
+				place in the same directory it is. If {file}
+				is omitted will try to load
+				`.vim/vc/project/Session.vim` in the current
+				project root directory.
+
+							*:VcProject-delete*
+:VcProject delete {file}	Delete project file, try to delete
+				`.vim/vc/project/Session.vim` if {file} is
+				omitted.
+
+							*:VcProject-config*
+:VcProject config		Open configuration file of current project to
+				edit.
+
+							*:VcProject-pause*
+:VcProject pause		Pause tracking current project, the session
+				file will no auto update after the command
+				run.
+
+							*:VcProject-rename*
+:VcProject rename		Rename current project.
+
+==============================================================================
+							*project-functions*
+3. Functions~
+
+The following functions are provides by this plugin.
+
+							*VcProjectName()*
+Get current project name, return `null_string` if no project opened.
+
+==============================================================================
+
+vim:tw=78:ts=8:noet:ft=help:norl:

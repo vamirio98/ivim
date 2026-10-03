@@ -169,7 +169,7 @@ enddef
 
 def Pause(): void
     if !exists('g:thisSession')
-        mMsg.Error("No project open")
+        mMsg.Error("No project opened")
         return
     endif
     mMsg.Warn($'Pausing session in {mPath.Shortpath(g:thisSession)}')
@@ -179,7 +179,7 @@ enddef
 
 def Rename(): void
     if !exists('g:thisSession')
-        mMsg.Error("No project open")
+        mMsg.Error("No project opened")
         return
     endif
 
@@ -207,7 +207,7 @@ def Rename(): void
     mFile.SafeHandle(ini, (fpath) => {
         writefile(body, fpath)
     })
-    mMsg.Warn($'Reanme project {oldName} => {newName}')
+    mMsg.Warn($'Rename project {oldName} => {newName}')
     mHistory.Update([newName, g:thisSession])
 enddef
 
