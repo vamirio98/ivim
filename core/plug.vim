@@ -55,7 +55,9 @@ IncScript site/plug/stargate.vim
 
 Plug 'kshenoy/vim-signature'
 
-# IncScript site/plug/which_key.vim
+Plug 'skywind3000/vim-quickui'
+Plug 'skywind3000/vim-navigator'
+IncScript site/plug/navigator.vim
 # IncScript site/plug/floaterm.vim
 # TODO: use myself terminal manager
 
