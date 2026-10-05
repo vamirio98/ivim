@@ -60,6 +60,7 @@ g:lightline.tabline = {
 # update each time cursor move, and have no color, only functions that consume
 # less performance can place here
 g:lightline.component_function = {
+    'vcFilename': 'g:VcFilename',
 }
 
 # only update when lightline#update() called, any function that consume high
@@ -75,7 +76,6 @@ g:lightline.component_expand = {
     'lspDiagHint': 'g:VcSlLspDiagHint',
     'lspStatus': 'g:VcSlLspStatus',
     'gitBranch': 'g:VcSlGitBranch',
-    'vcFilename': 'g:VcFilename',
     'vcProjectName': 'g:VcSlProjectName',
     # 'cocError': 'g:VcSlCocError',
     # 'cocWarn': 'g:VcSlCocWarn',
