@@ -2,11 +2,15 @@ vim9script
 
 import autoload "util/path.vim" as mPath
 import autoload "util/os.vim" as mOs
+import autoload 'util/str.vim' as mStr
+
+import autoload 'tool/plug.vim' as mPlug
+
 
 g:asynctasks_extra_config = get(g:, 'asynctasks_extra_config', [])
 g:asynctasks_extra_config += [
     mPath.Resolve(mPath.Joinpath(g:vcHome,
-        'site/third_party/asynctasks/tasks.ini')
+        'site/asynctasks/tasks.ini')
     )
 ]
 
@@ -15,60 +19,48 @@ g:asyncrun_rootmarks = g:vcRootmarkers
 g:asyncrun_shell = mOs.IsWin() ? 'bash' : 'pwsh'
 g:asynctasks_rtp_config = "asynctasks.ini"
 
+
 # python will buffer everything written to stdout when running as a backgroup
 # process, this can see the realtime output without calling `flush()`
 $PYTHONUNBUFFERED = '1'
 
-# {{{ LeaderF integration
-# https://github.com/skywind3000/asynctasks.vim/wiki/UI-Integration
-# if plug.Has('LeaderF')
-#   nnoremap <leader>pt <Cmd>Leaderf --nowrap task<CR>
-#   keymap.SetGroup('<leader>p', 'project')
-#   keymap.SetDesc('<leader>pt', 'Query Tasks')
 
-#   def LfTaskSource(..._): list<string>
-#     var rows: list<list<string>> = asynctasks#source(&columns * 48 / 100)
-#     var source: list<string> = []
-#     for row in rows
-#       var name: string = row[0]
-#       source += [name .. '  ' .. row[1] .. '  : ' .. row[2]]
-#     endfor
-#     return source
-#   enddef
+def ExecTask(line: string): void
+    var pos = stridx(line, '<')
+    if pos < 0
+        return
+    endif
+
+    var name: string = line->strpart(0, pos)->mStr.Strip()
+    if !empty(name)
+        exec 'AsyncTask' fnameescape(name)
+    endif
+enddef
 
 
-#   def LfTaskAccept(line: string, ..._): void
-#     var pos: number = stridx(line, '<')
-#     if pos < 0
-#       return
-#     endif
-#     var name: string = strpart(line, 0, pos)
-#     name = substitute(name, '^\s*\(.\{-}\)\s*$', '\1', '')
-#     if name != ''
-#       exec "AsyncTask " .. name
-#     endif
-#   enddef
+def SearchTask(): void
+    var rows = asynctasks#source(&columns * 48 / 100)
+    var tasks: list<string> = []
+    for row in rows
+        tasks += [ $'{row[0]}   {row[1]}  :  {row[2]}' ]
+    endfor
 
-#   def LfTaskDigest(line: string, ..._): list<any>
-#     var pos: number = stridx(a:line, '<')
-#     if pos < 0
-#       return [line, 0]
-#     endif
-#     var name: string = strpart(line, 0, pos)
-#     return [name, 0]
-#   enddef
+    fzf#run(fzf#wrap({
+        source: tasks,
+        sink: ExecTask,
+        options: '+m --nth 1 --inline-info --tac',
+    }))
+enddef
 
 
-#   g:Lf_Extensions = get(g:, 'Lf_Extensions', {})
-#   g:Lf_Extensions.task = {
-#     'source': string(function('s:LfTaskSource'))[10 : -3],
-#     'accept': string(function('s:LfTaskAccept'))[10 : -3],
-#     'get_digest': string(function('s:LfTaskDigest'))[10 : -3],
-#     'highlights_def': {
-#         'Lf_hl_funcScope': '^\S\+',
-#         'Lf_hl_funcDirname': '^\S\+\s*\zs<.*>\ze\s*:',
-#     },
-#     'help': 'navigate available tasks from asynctasks.vim',
-#   }
-# endif
-# }}}
+def Setup(): void
+    if mPlug.Has('fzf.vim')
+        nnoremap <space>pq <scriptcmd>SearchTask()<cr>
+    endif
+enddef
+
+
+augroup SitePlugAsynctask
+    au!
+    au VimEnter * Setup()
+augroup END
