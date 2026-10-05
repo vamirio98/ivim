@@ -197,20 +197,14 @@ nmap L <Plug>lightline#bufferline#go_next()
 nmap [b <Plug>lightline#bufferline#go_previous()
 nmap ]b <Plug>lightline#bufferline#go_next()
 
-# SetGroup('<leader>b', 'buffer')
 
 nmap <leader>bH <Plug>lightline#bufferline#move_first()
-# SetDesc('<leader>bH', 'Reorder to First')
 nmap <leader>bL <Plug>lightline#bufferline#move_last()
-# SetDesc('<leader>bL', 'Reorder to Last')
 
 nmap <leader>bh <Plug>lightline#bufferline#move_previous()
-# SetDesc('<leader>bh', 'Reorder to Prev')
 nmap <leader>bl <Plug>lightline#bufferline#move_next()
-# SetDesc('<leader>bl', 'Reorder to Next')
 
 nmap <leader>br <Plug>lightline#bufferline#reset_order()
-# SetDesc('<leader>br', 'Reorder')
 # }}}
 
 augroup VcSitePlugLightline

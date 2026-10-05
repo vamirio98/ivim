@@ -60,7 +60,7 @@ def Setup(): void
 enddef
 
 
-augroup SitePlugAsynctask
+augroup VcSitePlugAsynctask
     au!
     au VimEnter * Setup()
 augroup END

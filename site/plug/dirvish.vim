@@ -34,7 +34,7 @@ def ToggleHideDotfile()
     exec 'Dirvish'
 enddef
 
-augroup vc_site_plug_dirvish
+augroup VcSitePlugDirvish
     au!
     au FileType dirvish SetupDirvish()
     au BufLeave * if &ft ==# 'dirvish' && exists('b:vcDirvishCurFile')

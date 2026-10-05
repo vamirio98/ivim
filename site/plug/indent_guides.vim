@@ -40,16 +40,14 @@ def g:ToggleIndentGuides(): void
     endif
 enddef
 
-# keymap.SetGroup('<leader>u', 'ui')
-# keymap.SetDesc('<leader>ui', 'Toggle Indent Guides')
 nnoremap <space>ui <Cmd>call g:ToggleIndentGuides()<CR>
 # }}}
 
 g:indent_guides_auto_colors = 0
 augroup vc_site_plug_indent_guides
     au!
-    au VimEnter,ColorScheme * :hi link IndentGuidesOdd DiffAdd
-    au VimEnter,ColorScheme * :hi link IndentGuidesEven ToolbarLine
+    # au VimEnter,ColorScheme * :hi link IndentGuidesOdd DiffAdd
+    # au VimEnter,ColorScheme * :hi link IndentGuidesEven ToolbarLine
     au VimEnter * if g:vcIndentGuideEnabled
         | VcIndentGuidesEnable() | endif
 augroup END

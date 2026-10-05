@@ -6,7 +6,6 @@ augroup VcSitePlugVimspector
     au User VimSpectorUICreated CustomizeWinBar()
     au User VimSpectorJumpedToFrame OnJumpToFrame()
     au User VimSpectorDebugEnded ++nested OnDebugEnd()
-    au VimEnter * Setup()
 augroup END
 
 # customize UI {{{
@@ -93,26 +92,18 @@ def OnDebugEnd(): void
 enddef
 # }}}
 
-def Setup()
-    # SetGroup('<leader>d', 'debug')
 
-    nmap <silent> <leader>db <Plug>VimspectorToggleBreakpoint
-    # SetDesc('<leader>db', 'Toggle Breakpoint')
-    nmap <silent> <leader>dB <Plug>VimspectorToggleConditionalBreakpoint
-    # SetDesc('<leader>dB', 'Toggle Cond Breakpoint')
+# keymap {{{ #
+nmap <silent> <leader>db <Plug>VimspectorToggleBreakpoint
+nmap <silent> <leader>dB <Plug>VimspectorToggleConditionalBreakpoint
 
-    nmap <silent> <leader>dc <Plug>VimspectorContinue
-    # SetDesc('<leader>dc', 'Start/Continue')
+nmap <silent> <leader>dc <Plug>VimspectorContinue
 
-    nmap <silent> <leader>df <Plug>VimspectorAddFunctionBreakpoint
-    # SetDesc('<leader>df', 'Toggle Func Breakpoint')
+nmap <silent> <leader>df <Plug>VimspectorAddFunctionBreakpoint
 
-    nmap <silent> <leader>dp <Plug>VimspectorPause
-    # SetDesc('<leader>dp', 'Pause Debug')
+nmap <silent> <leader>dp <Plug>VimspectorPause
 
-    nmap <silent> <leader>dr <Plug>VimspectorRestart
-    # SetDesc('<leader>dr', 'Restart')
+nmap <silent> <leader>dr <Plug>VimspectorRestart
 
-    nmap <silent> <leader>ds <Plug>VimspectorStop
-    # SetDesc('<leader>ds', 'Stop')
-enddef
+nmap <silent> <leader>ds <Plug>VimspectorStop
+# }}} keymap #

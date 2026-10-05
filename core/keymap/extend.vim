@@ -5,39 +5,27 @@ import autoload 'tool/option.vim' as mOption
 import autoload 'tool/buffer.vim' as mBuffer
 
 type Option = mOption.Option
-# var SetGroup: func = keymap.# SetGroup
-# var SetDesc: func = keymap.# SetDesc
 
 # buffers {{{
-# SetGroup('<space>b', 'buffer')
 # switch to other buffer
 nnoremap <space>bb <Cmd>e #<CR>
-# SetDesc('<space>bb', 'Switch to Other Buffer')
 
 # delete buffer
 nnoremap <space>bd <ScriptCmd>mBuffer.Close()<CR>
-# SetDesc('<space>bd', 'Delete Buffer')
 # delete other buffers
 nnoremap <space>bo <ScriptCmd>mBuffer.CloseOthers()<CR>
-# SetDesc('<space>bo', 'Delete Other Buffers')
 # delete buffer and window
 nnoremap <space>bD <cmd>:bd<cr>
-# SetDesc('<space>bD', 'Delete Buffer & Window')
 # }}}
 
 # clear search on escape
-# SetGroup('<space>u', 'ui')
 # clear search, diff update and redraw, taken from runtime/lua/_editor.lua
 nnoremap <space>ur <Cmd>noh<bar>diffupdate<bar>normal! <C-l><CR>
-# SetDesc('<space>ur', 'Clear Hlsearch / Diff Update / Redraw')
 
 # new file
-# SetGroup('<space>f', 'file')
 nnoremap <space>fn <Cmd>enew<CR>
-# SetDesc('<space>fn', 'New File')
 
 # {{{ location list/ quickfix list
-# SetGroup('<space>x', 'location')
 # location list
 def ToggleLocList(): void
     var ll = getloclist(bufnr('%'))
@@ -49,9 +37,7 @@ def ToggleLocList(): void
     endif
 enddef
 nnoremap <space>xl <ScriptCmd>ToggleLocList()<CR>
-# SetDesc('<space>xl', 'Toggle Location List')
 
-# SetGroup('<space>x', 'quickfix')
 # quickfix list
 def ToggleQfList(): void
     var qf = getqflist({'bufnr': bufnr('%')})
@@ -63,22 +49,17 @@ def ToggleQfList(): void
     endif
 enddef
 nnoremap <space>xq <ScriptCmd>ToggleQfList()<CR>
-# SetDesc('<space>xq', 'Toggle QuickFix List')
 # }}}
 
 # {{{ option
-# SetGroup('<space>u', 'option')
 var spell = Option.new('spell')
 nnoremap <space>us <ScriptCmd>spell.Toggle()<CR>
-# SetDesc('<space>us', 'Toggle Spell')
 
 var wrap = Option.new('wrap')
 nnoremap <space>uw <ScriptCmd>wrap.Toggle()<CR>
-# SetDesc('<space>uw', 'Toggle Wrap')
 
 var relativenumber = Option.new('relativenumber')
 nnoremap <space>uL <ScriptCmd>relativenumber.Toggle()<CR>
-# SetDesc('<space>uL', 'Toggle Relative Line No')
 
 def SetLineNo(enable: bool): void
     b:vc_rnu = get(b:, 'vc_rnu', &relativenumber)
@@ -92,15 +73,12 @@ def SetLineNo(enable: bool): void
 enddef
 var number = Option.new('number', v:none, SetLineNo)
 nnoremap <space>ul <ScriptCmd>number.Toggle()<CR>
-# SetDesc('<space>ul', 'Toggle Line No')
 
 var conceallevel = Option.newOnOff('conceallevel', (&cole > 0 ? &cole : 2), 0)
 nnoremap <space>uc <ScriptCmd>conceallevel.Toggle()<CR>
-# SetDesc('<space>uc', 'Toggle Conceal Lv')
 
 var colorcolumn = Option.newOnOff('colorcolumn', (&cc == "" ? "81" : &cc), "")
 nnoremap <space>uC <ScriptCmd>colorcolumn.Toggle()<CR>
-# SetDesc('<space>uC', 'Toggle Color Column')
 
 # {{{ toggle paste mode
 # set filetype to empty to avoid vim format paste content
@@ -117,7 +95,6 @@ def TogglePasteMode(): void
     endif
 enddef
 nnoremap <space>up <ScriptCmd>TogglePasteMode()<CR>
-# SetDesc('<space>up', 'Toggle Paste Mode')
 # }}}
 
 # }}}
@@ -155,7 +132,6 @@ def ToggleWinMax()
     endif
 enddef
 nnoremap <space>um <ScriptCmd>ToggleWinMax()<CR>
-# SetDesc('<space>um', 'Toggle Win Maximize')
 augroup VcConfigKeymapRestoreMaximizeWinOnWinleave
     au!
     au WinLeave * RestoreWin()
@@ -166,19 +142,11 @@ augroup END
 
 # tabs {{{
 # vim-which-key only recognize <Tab>, no <tab>
-# SetGroup('<space><Tab>', 'tab')
 nnoremap <space><Tab>f <Cmd>tabfirst<CR>
-# SetDesc('<space><Tab>f', 'First Tab')
 nnoremap <space><Tab>l <Cmd>tablast<CR>
-# SetDesc('<space><Tab>l', 'Last Tab')
 nnoremap <space><Tab>o <Cmd>tabonly<CR>
-# SetDesc('<space><Tab>o', 'Close Other Tabs')
 nnoremap <space><Tab>n <Cmd>tabnew<CR>
-# SetDesc('<space><Tab>n', 'New Tab')
 nnoremap <space><Tab>d <Cmd>tabclose<CR>
-# SetDesc('<space><Tab>d', 'Close Tab')
 nnoremap [<Tab> <Cmd>tabprevious<CR>
-# SetDesc('[<Tab>', 'Prev Tab')
 nnoremap ]<Tab> <Cmd>tabnext<CR>
-# SetDesc(']<Tab>', 'Next Tab')
 # }}}

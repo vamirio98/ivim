@@ -22,22 +22,17 @@ g:fzf_layout = { 'down': '50%' }
 # the candidate list
 g:fzf_vim.preview_window = [ 'right,50%,<70(up,40%)', 'ctrl-/' ]
 
-Plug 'junegunn/fzf'
-Plug 'junegunn/fzf.vim'
-
-augroup VcSitePlugFzf
-    au!
-    au VimEnter * Setup()
-augroup END
 
 def FindVcFiles(): void
     exec $'Files {g:vc_home}'
 enddef
 
+
 def FindProjFiles(): void
     var root: string = mRoot.Root()
     exec 'Files' root
 enddef
+
 
 # git {{{ #
 def IsGitRepo(a_dir: string = null_string): bool
@@ -73,28 +68,20 @@ enddef
 noremap <space>gb <scriptcmd>ChangeGitDiffBase()<cr>
 # }}} git #
 
-def Setup(): void
+
 # keymap {{{ #
-    # SetGroup('<leader>f', 'file')
-    nnoremap <space>fc <scriptcmd>FindVcFiles()<cr>
-    # SetDesc('<space>fc', 'Conf File')
-    nnoremap <space>ff <scriptcmd>FindProjFiles()<cr>
-    # SetDesc('<space>ff', 'File (Project Root)')
-    nnoremap <space>fF <cmd>Files .<cr>
-    # SetDesc('<space>fF', 'File (Cwd)')
-    nnoremap <space>fr <cmd>History<cr>
-    # SetDesc('<space>fr', 'Recent Files')
+nnoremap <space>fc <scriptcmd>FindVcFiles()<cr>
+nnoremap <space>ff <scriptcmd>FindProjFiles()<cr>
+nnoremap <space>fF <cmd>Files .<cr>
+nnoremap <space>fr <cmd>History<cr>
 
-    # SetGroup('<space>s', 'search')
-
-    # TODO: gtags
-    nnoremap <space>sb <cmd>Buffers<cr>
-    nnoremap <space>sc <cmd>Hisotry:<cr>
-    nnoremap <space>sh <cmd>Helptags<cr>
-    nnoremap <space>sj <cmd>Jumps<cr>
-    nnoremap <space>sk <cmd>Maps<cr>
-    nnoremap <space>sm <cmd>Marks<cr>
-    nnoremap <space>st <cmd>BTags<cr>
-    nnoremap <space>sT <cmd>Tags<cr>
+# TODO: gtags
+nnoremap <space>sb <cmd>Buffers<cr>
+nnoremap <space>sc <cmd>Hisotry:<cr>
+nnoremap <space>sh <cmd>Helptags<cr>
+nnoremap <space>sj <cmd>Jumps<cr>
+nnoremap <space>sk <cmd>Maps<cr>
+nnoremap <space>sm <cmd>Marks<cr>
+nnoremap <space>st <cmd>BTags<cr>
+nnoremap <space>sT <cmd>Tags<cr>
 # }}} keymap #
-enddef

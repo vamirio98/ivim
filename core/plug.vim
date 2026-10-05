@@ -27,7 +27,6 @@ Plug 'LunarWatcher/auto-pairs'
 IncScript site/plug/auto_pairs.vim
 
 Plug 'vamirio98/vim-strip-trailing-whitespace'
-IncScript site/plug/strip_trailing_whitespace.vim
 
 IncScript site/plug/matchup.vim
 Plug 'andymass/vim-matchup'
@@ -55,9 +54,6 @@ IncScript site/plug/stargate.vim
 
 Plug 'kshenoy/vim-signature'
 
-Plug 'skywind3000/vim-quickui'
-Plug 'skywind3000/vim-navigator'
-IncScript site/plug/navigator.vim
 # IncScript site/plug/floaterm.vim
 # TODO: use myself terminal manager
 

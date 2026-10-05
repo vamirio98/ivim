@@ -6,14 +6,6 @@ import autoload 'util/path.vim' as mPath
 type Option = mOption.Option
 
 
-augroup VcSitePlugLsp
-    au!
-    au User LspSetup g:LspOptionsSet(lspOpts)
-    au User LspSetup g:LspAddServer(lspServers)
-    au VimEnter * Setup()
-augroup END
-
-
 var lspOpts = {
     # aleSupport: true,
     autoComplete: false,
@@ -70,9 +62,9 @@ var defLspServers = [
 
 var lspServers: list<dict<any>> = []
 for lsp in defLspServers
-  if executable(lsp['path'])
-    lspServers->add(lsp)
-  endif
+    if executable(lsp['path'])
+        lspServers->add(lsp)
+    endif
 endfor
 
 
@@ -81,96 +73,78 @@ def Hover(): string
     return res =~ 'Error' ? 'K' : ''
 enddef
 
-def Setup(): void
 # {{{ keymap
-    # var SetGroup = keymap.SetGroup
-    # var SetDesc = keymap.SetDesc
-    nnoremap <silent><expr> K Hover()
-
-    nnoremap [d <cmd>LspDiag prev<cr>
-    nnoremap ]d <cmd>LspDiag next<cr>
-
-    # SetGroup('<space>c', 'code')
-    nnoremap <space>ca <cmd>LspCodeAction<cr>
-    # SetDesc('<space>ca', 'Code Action')
-    nnoremap <space>cc <cmd>LspIncomingCalls<cr>
-    # SetDesc('<space>cc', 'Incoming Calls')
-    nnoremap <space>cC <cmd>LspOutgoingCalls<cr>
-    # SetDesc('<space>cC', 'Outgoing Calls')
-    nnoremap <space>cd <cmd>LspDiag show<cr>
-    # SetDesc('<space>cd', 'Show Diag')
-    # nnoremap <space>cf <cmd>LspFormat<cr>
-    # SetDesc('<space>cf', 'Format')
-    nnoremap <space>ch <cmd>LspSwitchSourceHeader<cr>
-    # SetDesc('<space>ch', 'Switch Header/Source')
-    nnoremap <space>cl <cmd>LspCodeLens<cr>
-    # SetDesc('<space>cl', 'Code Lens')
-    nnoremap <space>co <cmd>LspOutline<cr>
-    # SetDesc('<space>co', 'Outline')
-    # SetGroup('<space>cp', 'peek')
-    nnoremap <space>cpD <cmd>LspPeekDeclaration<cr>
-    # SetDesc('<space>cpD', 'Peek Declaration')
-    nnoremap <space>cpd <cmd>LspPeekDefinition<cr>
-    # SetDesc('<space>cpd', 'Peek Definition')
-    nnoremap <space>cpi <cmd>LspPeekImpl<cr>
-    # SetDesc('<space>cpi', 'Peek Impl')
-    nnoremap <space>cpr <cmd>LspPeekReferences<cr>
-    # SetDesc('<space>cpr', 'Peek Refs')
-    nnoremap <space>cr <cmd>LspRename<cr>
-    # SetDesc('<space>cr', 'Rename Symbol')
-    nnoremap <space>cy <cmd>LspSubTypeHierarchy<cr>
-    # SetDesc('<space>cy', 'Show Sub Type Hierarchy')
-    nnoremap <space>cY <cmd>LspSuperTypeHierarchy<cr>
-    # SetDesc('<space>cY', 'Show Super Type Hierarchy')
-
-    # SetGroup('g', 'goto')
-    def GoToDefinition(): void
-        var res: string = execute('LspGotoDefinition')
-        if res =~ 'Error'
-            exec 'normal! gd'
-            clearmatches()
-        endif
-    enddef
-    nnoremap gd <ScriptCmd>GoToDefinition()<cr>
-    # SetDesc('gd', 'Go to Definition')
-    nnoremap gD <cmd>LspGotoDeclaration<cr>
-    # SetDesc('gD', 'Go to Declaration')
-    nnoremap gi <cmd>LspGotoImpl<cr>
-    # SetDesc('gi', 'Go to Impl')
-    nnoremap gr <cmd>LspShowReferences<cr>
-    # SetDesc('gr', 'Go to Refs')
-    nnoremap gy <cmd>LspGotoTypeDef<cr>
-    # SetDesc('gy', 'Go to Type Define')
-
-    # SetGroup('<space>s', 'search')
-    nnoremap <space>ss <cmd>LspDocumentSymbol<cr>
-    # SetDesc('<space>ss', 'Search Symbol (Document)')
-    nnoremap <space>sS <cmd>LspSymbolSearch<cr>
-    # SetDesc('<space>sS', 'Search Symbol (Workspace)')
-
-    def GetInlayHints(): bool
-        return g:LspOptionsGet()['showInlayHints']
-    enddef
-    def SetInlayHints(on: bool): void
-        var opt = g:LspOptionsGet()
-        opt.showInlayHints = on
-        g:LspOptionsSet(opt)
-    enddef
-    var inlayHints = Option.new('inlay hints', GetInlayHints, SetInlayHints)
-    nnoremap <space>uh <ScriptCmd>inlayHints.Toggle()<cr>
-    # SetDesc('<space>uh', 'Toggle Inlay Hints')
-
-    def GetSemanticHighlight(): bool
-        return g:LspOptionsGet()['semanticHighlight']
-    enddef
-    def SetSemanticHighlight(on: bool): void
-        var opt = g:LspOptionsGet()
-        opt.semanticHighlight = on
-        g:LspOptionsSet(opt)
-    enddef
-    var semanticHighlight = Option.new('sematic highlight',
-        GetSemanticHighlight, SetSemanticHighlight)
-    nnoremap <space>uH <ScriptCmd>semanticHighlight.Toggle()<cr>
-    # SetDesc('<space>uH', 'Toggle Semantic Hightlight')
-# }}}
+def GoToDefinition(): void
+    var res: string = execute('LspGotoDefinition')
+    if res =~ 'Error'
+        exec 'normal! gd'
+        clearmatches()
+    endif
 enddef
+
+
+def GetInlayHints(): bool
+    return g:LspOptionsGet()['showInlayHints']
+enddef
+def SetInlayHints(on: bool): void
+    var opt = g:LspOptionsGet()
+    opt.showInlayHints = on
+    g:LspOptionsSet(opt)
+enddef
+var s_inlayHints = Option.new('inlay hints', GetInlayHints, SetInlayHints)
+
+def GetSemanticHighlight(): bool
+    return g:LspOptionsGet()['semanticHighlight']
+enddef
+def SetSemanticHighlight(on: bool): void
+    var opt = g:LspOptionsGet()
+    opt.semanticHighlight = on
+    g:LspOptionsSet(opt)
+enddef
+var s_semanticHighlight = Option.new('sematic highlight',
+    GetSemanticHighlight, SetSemanticHighlight)
+
+
+def OnLspAttached(): void
+    nnoremap <buffer><silent><expr> K Hover()
+
+    nnoremap <buffer> [d <cmd>LspDiag prev<cr>
+    nnoremap <buffer> ]d <cmd>LspDiag next<cr>
+
+    nnoremap <buffer> <space>ca <cmd>LspCodeAction<cr>
+    nnoremap <buffer> <space>cc <cmd>LspIncomingCalls<cr>
+    nnoremap <buffer> <space>cC <cmd>LspOutgoingCalls<cr>
+    nnoremap <buffer> <space>cd <cmd>LspDiag show<cr>
+    # nnoremap <buffer> <space>cf <cmd>LspFormat<cr>
+    nnoremap <buffer> <space>ch <cmd>LspSwitchSourceHeader<cr>
+    nnoremap <buffer> <space>cl <cmd>LspCodeLens<cr>
+    nnoremap <buffer> <space>co <cmd>LspOutline<cr>
+    nnoremap <buffer> <space>cpD <cmd>LspPeekDeclaration<cr>
+    nnoremap <buffer> <space>cpd <cmd>LspPeekDefinition<cr>
+    nnoremap <buffer> <space>cpi <cmd>LspPeekImpl<cr>
+    nnoremap <buffer> <space>cpr <cmd>LspPeekReferences<cr>
+    nnoremap <buffer> <space>cr <cmd>LspRename<cr>
+    nnoremap <buffer> <space>cy <cmd>LspSubTypeHierarchy<cr>
+    nnoremap <buffer> <space>cY <cmd>LspSuperTypeHierarchy<cr>
+
+    nnoremap <buffer> gd <ScriptCmd>GoToDefinition()<cr>
+    nnoremap <buffer> gD <cmd>LspGotoDeclaration<cr>
+    nnoremap <buffer> gi <cmd>LspGotoImpl<cr>
+    nnoremap <buffer> gr <cmd>LspShowReferences<cr>
+    nnoremap <buffer> gy <cmd>LspGotoTypeDef<cr>
+
+    nnoremap <buffer> <space>ss <cmd>LspDocumentSymbol<cr>
+    nnoremap <buffer> <space>sS <cmd>LspSymbolSearch<cr>
+
+    nnoremap <buffer> <space>uh <ScriptCmd>s_inlayHints.Toggle()<cr>
+    nnoremap <buffer> <space>uH <ScriptCmd>s_semanticHighlight.Toggle()<cr>
+enddef
+# }}}
+
+
+augroup VcSitePlugLsp
+    au!
+    au User LspSetup g:LspOptionsSet(lspOpts)
+    au User LspSetup g:LspAddServer(lspServers)
+    au User LspAttached OnLspAttached()
+augroup END
