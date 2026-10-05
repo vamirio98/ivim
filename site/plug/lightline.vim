@@ -1,7 +1,8 @@
 vim9script
 
 import autoload "util/msg.vim" as mMsg
-# import autoload 'vc/tui/highlight.vim' as mHl
+
+import autoload 'tui/highlight.vim' as mHighlight
 
 
 # {{{ setting
@@ -14,11 +15,11 @@ g:lightline#bufferline#filter_by_tabpage = 1
 g:lightline#bufferline#enable_devicons = 1
 
 def g:LightlineBufferlineFilter(buffer: number): bool
-  return getbufvar(buffer, '&buftype') !=# 'terminal'
+    return getbufvar(buffer, '&buftype') !=# 'terminal'
 enddef
 
 if !exists('g:lightline')
-  g:lightline = {}
+    g:lightline = {}
 endif
 
 g:lightline.subseparator = {'left': '|', 'right': '|'}
@@ -32,54 +33,70 @@ g:lightline#bufferline#buffer_filter = "g:LightlineBufferlineFilter"
 g:lightline.colorscheme = 'gruvbox_material'
 
 g:lightline.active = {
-  'left': [ ['mode', 'paste'],
-    [ 'gitbranch',
-      # 'coc_error', 'coc_warn', 'lspdiag',
-      # 'linter_checking', 'linter_errors', 'linter_warnings', 'linter_infos',
-      'vcFilename', 'modified',
+    'left': [ ['mode', 'paste'],
+        [
+            'gitbranch',
+            'lspDiagError', 'lspDiagWarn',
+            # 'lspDiagInfo', 'lspDiagHint',
+            # 'coc_error', 'coc_warn',
+            'lspdiag', 'lspstatus',
+            'vcFilename', 'modified', 'abc'
+        ],
     ],
-  ],
-  'right': [ ['lineinfo'], ['percent'],
-    ['gutentags', 'gitsummary', 'fileformat', 'filetype'],
-  ]
+    'right': [ ['lineinfo'], ['percent'],
+        ['gutentags', 'gitsummary', 'fileformat', 'filetype'],
+    ]
 }
 g:lightline.tabline = {
-  'left': [ ['buffers'] ],
-  'right': [ ['rtabs'] ],
+    'left': [ ['buffers'] ],
+    'right': [ ['rtabs'] ],
 }
 
+# g:lightline.component = {
+# }
+
+# update each time cursor move, and have no color, only functions that consume
+# less performance can place here
 g:lightline.component_function = {
-  'vcFilename': 'g:VcFilename',
+    'vcFilename': 'g:VcFilename',
 }
+
+# only update when lightline#update() called, any function that consume high
+# performance should place in here
 g:lightline.component_expand = {
-  'buffers': 'lightline#bufferline#buffers',
-  'rtabs': 'g:LightlineTabRight',
-  'gutentags': "g:VcStlTags",
-  'gitsummary': "g:VcStlGitSummary",
-  #'lspdiag': 'g:VcStlLspDiag',
-  'gitbranch': 'g:VcStlGitBranch',
-  # 'coc_error': 'g:VcStlCocError',
-  # 'coc_warn': 'g:VcStlCocWarn',
-  'linter_checking': 'lightline#ale#checking',
-  'linter_infos': 'lightline#ale#infos',
-  'linter_warnings': 'lightline#ale#warnings',
-  'linter_errors': 'lightline#ale#errors',
+    'buffers': 'lightline#bufferline#buffers',
+    'rtabs': 'g:LightlineTabRight',
+    'gutentags': "g:VcSlTags",
+    'gitsummary': "g:VcSlGitSummary",
+    'lspDiagError': 'g:VcSlLspDiagError',
+    'lspDiagWarn': 'g:VcSlLspDiagWarn',
+    'lspDiagInfo': 'g:VcSlLspDiagInfo',
+    'lspDiagHint': 'g:VcSlLspDiagHint',
+    'lspdiag': 'g:VcSlLspDiag',
+    'lspstatus': 'g:VcSlLspStatus',
+    'gitbranch': 'g:VcSlGitBranch',
+    # 'coc_error': 'g:VcSlCocError',
+    # 'coc_warn': 'g:VcSlCocWarn',
 }
+
+# specify the component_expand color
 g:lightline.component_type = {
-  'buffers': 'tabsel',
-  'rtabs': 'tabsel',
-  'coc_error': 'error',
-  'coc_warn': 'warning',
-  'linter_checking': 'right',
-  'linter_infos': 'right',
-  'linter_warnings': 'warning',
-  'linter_errors': 'error',
+    'buffers': 'tabsel',
+    'rtabs': 'tabsel',
+    'coc_error': 'error',
+    'coc_warn': 'warning',
+    'lspDiagError': 'error',
+    'lspDiagWarn': 'warning',
 }
+
+# g:lightline.component_raw = {
+# }
+
 # }}}
 
 # {{{ lightline-ale
 g:lightline#ale#indicator_checking = " "
-g:lightline#ale#indicator_infos = " "
+g:lightline#ale#indicator_infos = "󰋼 "
 g:lightline#ale#indicator_warnings = " "
 g:lightline#ale#indicator_errors = " "
 # }}}
@@ -87,111 +104,145 @@ g:lightline#ale#indicator_errors = " "
 # {{{ component utils
 # {{{ setup color group
 def SetupColor()
-  hi! link VcStlA LightlineLeft_normal_0
-  hi! link VcStlB LightlineLeft_normal_1
-  hi! link VcStlC LightlineRight_normal_2
-  hi! link VcStlX LightlineRight_normal_2
-  hi! link VcStlY LightlineRight_normal_1
-  hi! link VcStlZ LightlineRight_normal_0
+    hi! link VcSlA LightlineLeft_normal_0
+    hi! link VcSlB LightlineLeft_normal_1
+    hi! link VcSlC LightlineRight_normal_2
+    hi! link VcSlX LightlineRight_normal_2
+    hi! link VcSlY LightlineRight_normal_1
+    hi! link VcSlZ LightlineRight_normal_0
 
-  # SetupStlGitSumColor()
-  # SetupStlLspDiagColor()
-  # SetupStlGitBranchColor()
+    SetupSlGitSumColor()
+    SetupSlLspDiagColor()
+    SetupSlGitBranchColor()
 
-  # change tabline color, see:
-  # https://github.com/itchyny/lightline.vim/issues/508#issuecomment-694716949
-  var palette = eval(printf("g:lightline#colorscheme#%s#palette",
-    g:lightline.colorscheme))
-  palette.tabline.right = palette.tabline.left
+    # change tabline color, see:
+    # https://github.com/itchyny/lightline.vim/issues/508#issuecomment-694716949
+    var palette = eval(printf("g:lightline#colorscheme#%s#palette",
+        g:lightline.colorscheme))
+    palette.tabline.right = palette.tabline.left
 enddef
 # }}}
 
 # tags {{{ #
-def g:VcStlTags(): string
-  return gutentags#statusline('[R] ', '', 'tags')
+def g:VcSlTags(): string
+    return gutentags#statusline('[R] ', '', 'tags')
 enddef
 # }}} tags #
 
 # {{{ tabs
 # see: https://github.com/itchyny/lightline.vim/issues/440#issuecomment-610172628
 def g:LightlineTabRight(): list<list<string>>
-  return reverse(lightline#tabs())
+    return reverse(lightline#tabs())
 enddef
 # }}}
 
 # {{{ filename
 def g:VcFilename(): string
-  var fn = expand('%')
-  if &ft == 'dirvish'
-    return fn == '/' ? fn : fnamemodify(fn, ':h:t')
-  else
-    fn = fnamemodify(fn, ':t')
-    fn = fn == '' ? "[No Name]" : fn
-    return fn
-  endif
+    var fn = expand('%')
+    if &ft == 'dirvish'
+        return fn == '/' ? fn : fnamemodify(fn, ':h:t')
+    else
+        fn = fnamemodify(fn, ':t')
+        fn = fn == '' ? "[No Name]" : fn
+        return fn
+    endif
 enddef
 # }}}
 
 # {{{ git summary
-# def SetupStlGitSumColor(): void
-#     'VcStlGitSumAdd'->mHl.Combine('GitGutterAdd', 'VcStlX')
-#     'VcStlGitSumChange'->mHl.Combine('GitGutterChange', 'VcStlX')
-#     'VcStlGitSumDelete'->mHl.Combine('GitGutterDelete', 'VcStlX')
-# enddef
+def SetupSlGitSumColor(): void
+    'VcSlGitSumAdd'->mHighlight.Combine('GitGutterAdd', 'VcSlX')
+    'VcSlGitSumChange'->mHighlight.Combine('GitGutterChange', 'VcSlX')
+    'VcSlGitSumDelete'->mHighlight.Combine('GitGutterDelete', 'VcSlX')
+enddef
 
-def g:VcStlGitSummary(): string
+def g:VcSlGitSummary(): string
     var [a, m, r] = g:GitGutterGetHunkSummary()
     return printf('%s%s%s%s%s',
-        (a == 0 ? '' : printf('%%#VcStlGitSumAdd#+%%(%d%%)%%*', a)),
+        (a == 0 ? '' : printf('%%#VcSlGitSumAdd#+%%(%d%%)%%*', a)),
         (m + r > 0 ? ' ' : ''),
-        (m == 0 ? '' : printf('%%#VcStlGitSumChange#~%%(%d%%)%%*', m)),
+        (m == 0 ? '' : printf('%%#VcSlGitSumChange#~%%(%d%%)%%*', m)),
         (m > 0 && r > 0 ? ' ' : ''),
-        (r == 0 ? '' : printf('%%#VcStlGitSumDelete#-%%(%d%%)%%*', r))
+        (r == 0 ? '' : printf('%%#VcSlGitSumDelete#-%%(%d%%)%%*', r))
     )
 enddef
 # }}}
 
 # {{{ git branch
-# def SetupStlGitBranchColor(): void
-#     'VcStlGitBranch'->mHl.Combine('Blue', 'VcStlB')
-# enddef
-def g:VcStlGitBranch(): string
+def SetupSlGitBranchColor(): void
+    'VcSlGitBranch'->mHighlight.Combine('Blue', 'VcSlB')
+enddef
+def g:VcSlGitBranch(): string
     if &ft == 'dirvish'
         return ''
     else
         var br = g:FugitiveHead()
         return len(br) == 0 ? '' :
-            printf('%%#VcStlGitBranch# %%(%s%%)%%#VcStlB#', br)
+            printf('%%#VcSlGitBranch# %%(%s%%)%%#VcSlB#', br)
     endif
 enddef
 # }}}
 
 # {{{ lsp diag
-# def SetupStlLspDiagColor(): void
-#     'VcStlLspDiagError'->mHl.Combine('Red', 'VcStlB')
-#     'VcStlLspDiagWarn'->mHl.Combine('Yellow', 'VcStlB')
-# enddef
+def SetupSlLspDiagColor(): void
+    'VcSlLspDiagError'->mHighlight.Combine('Red', 'VcSlB')
+    'VcSlLspDiagWarn'->mHighlight.Combine('Yellow', 'VcSlB')
+    'VcSlLspDiagInfo'->mHighlight.Combine('Blue', 'VcSlB')
+    'VcSlLspDiagHint'->mHighlight.Combine('Purple', 'VcSlB')
+enddef
+def g:VcSlLspDiagError(): string
+    const count = lsp#lsp#ErrorCount().Error
+    return count == 0 ? '' : $'{count}'
+enddef
+def g:VcSlLspDiagWarn(): string
+    const count = lsp#lsp#ErrorCount().Warn
+    return count == 0 ? '' : $'{count}'
+enddef
+def g:VcSlLspDiagInfo(): string
+    const count = lsp#lsp#ErrorCount().Info
+    return count == 0 ? '' : $'{count}󰋼'
+enddef
+def g:VcSlLspDiagHint(): string
+    const count = lsp#lsp#ErrorCount().Hint
+    return count == 0 ? '' : $'{count}󰌵'
+enddef
+def g:VcSlLspStatus(): string
+    if empty(g:LspProgress)
+        return ''
+    endif
+
+    for info in values(g:LspProgress)
+        var parts = []
+        if !empty(info.title)
+            parts->add(info.title)
+        endif
+        if info.percentage >= 0
+            parts->add(info.percentage .. '%')
+        endif
+        return parts->join(' ')
+    endfor
+    return ''
+enddef
 # }}}
 
 # {{{ coc-status
-def g:VcStlCocError(): string
-  var error_sign: string = get(g:, 'coc_status_error_sign', ' ')
-  var info = get(b:, 'coc_diagnostic_info', {})
-  var error_num: number = get(info, 'error', 0)
-  return error_num == 0 ? '' : printf("%s%d", error_sign, error_num)
+def g:VcSlCocError(): string
+    var errorSign: string = get(g:, 'coc_status_error_sign', ' ')
+    var info = get(b:, 'coc_diagnostic_info', {})
+    var errorNum: number = get(info, 'error', 0)
+    return errorNum == 0 ? '' : printf("%s%d", errorSign, errorNum)
 enddef
-def g:VcStlCocWarn(): string
-  var warn_sign: string = get(g:, 'coc_status_warning_sign', ' ')
-  var info = get(b:, 'coc_diagnostic_info', {})
-  var warn_num: number = get(info, 'warning', 0)
-  return warn_num == 0 ? '' : printf("%s%d", warn_sign, warn_num)
+def g:VcSlCocWarn(): string
+    var warnSign: string = get(g:, 'coc_status_warning_sign', ' ')
+    var info = get(b:, 'coc_diagnostic_info', {})
+    var warnNum: number = get(info, 'warning', 0)
+    return warnNum == 0 ? '' : printf("%s%d", warnSign, warnNum)
 enddef
 # }}}
 
 # }}}
 
 # {{{ keymap
-
 nmap H <Plug>lightline#bufferline#go_previous()
 nmap L <Plug>lightline#bufferline#go_next()
 nmap [b <Plug>lightline#bufferline#go_previous()
@@ -230,4 +281,6 @@ augroup VcSitePlugLightline
         au BufDelete * if timer_start(200, function('ReloadBufline')) == -1
             | mMsg.Error('cannot refresh bufferline') | endif
     endif
+
+    au User LspProgressUpdate lightline#update()
 augroup END

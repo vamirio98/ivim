@@ -22,6 +22,10 @@ var lspOpts = {
     showDiagWithVirtualText: true,
     diagVirtualTextAlign: 'after',
     diagVirtualTextWrap: 'truncate',
+    diagSignErrorText: '',
+    diagSignWarningText: '',
+    diagSignInfoText: '󰋼',
+    diagSignHintText: '󰌵',
 }
 
 var defLspServers = [
