@@ -1,6 +1,7 @@
 vim9script
 
 import autoload "util/msg.vim" as mMsg
+import autoload 'util/path.vim' as mPath
 
 import autoload 'tui/highlight.vim' as mHighlight
 
@@ -35,16 +36,17 @@ g:lightline.colorscheme = 'gruvbox_material'
 g:lightline.active = {
     'left': [ ['mode', 'paste'],
         [
-            'gitbranch',
+            'vcProjectName',
+            'gitBranch',
             'lspDiagError', 'lspDiagWarn',
             # 'lspDiagInfo', 'lspDiagHint',
-            # 'coc_error', 'coc_warn',
-            'lspdiag', 'lspstatus',
-            'vcFilename', 'modified', 'abc'
+            # 'cocError', 'cocWarn',
+            'lspStatus',
+            'vcFilename'
         ],
     ],
     'right': [ ['lineinfo'], ['percent'],
-        ['gutentags', 'gitsummary', 'fileformat', 'filetype'],
+        ['gutentags', 'gitSummary', 'fileformat', 'filetype'],
     ]
 }
 g:lightline.tabline = {
@@ -58,7 +60,6 @@ g:lightline.tabline = {
 # update each time cursor move, and have no color, only functions that consume
 # less performance can place here
 g:lightline.component_function = {
-    'vcFilename': 'g:VcFilename',
 }
 
 # only update when lightline#update() called, any function that consume high
@@ -67,24 +68,25 @@ g:lightline.component_expand = {
     'buffers': 'lightline#bufferline#buffers',
     'rtabs': 'g:LightlineTabRight',
     'gutentags': "g:VcSlTags",
-    'gitsummary': "g:VcSlGitSummary",
+    'gitSummary': "g:VcSlGitSummary",
     'lspDiagError': 'g:VcSlLspDiagError',
     'lspDiagWarn': 'g:VcSlLspDiagWarn',
     'lspDiagInfo': 'g:VcSlLspDiagInfo',
     'lspDiagHint': 'g:VcSlLspDiagHint',
-    'lspdiag': 'g:VcSlLspDiag',
-    'lspstatus': 'g:VcSlLspStatus',
-    'gitbranch': 'g:VcSlGitBranch',
-    # 'coc_error': 'g:VcSlCocError',
-    # 'coc_warn': 'g:VcSlCocWarn',
+    'lspStatus': 'g:VcSlLspStatus',
+    'gitBranch': 'g:VcSlGitBranch',
+    'vcFilename': 'g:VcFilename',
+    'vcProjectName': 'g:VcSlProjectName',
+    # 'cocError': 'g:VcSlCocError',
+    # 'cocWarn': 'g:VcSlCocWarn',
 }
 
 # specify the component_expand color
 g:lightline.component_type = {
     'buffers': 'tabsel',
     'rtabs': 'tabsel',
-    'coc_error': 'error',
-    'coc_warn': 'warning',
+    'cocError': 'error',
+    'cocWarn': 'warning',
     'lspDiagError': 'error',
     'lspDiagWarn': 'warning',
 }
@@ -112,7 +114,6 @@ def SetupColor()
     hi! link VcSlZ LightlineRight_normal_0
 
     SetupSlGitSumColor()
-    SetupSlLspDiagColor()
     SetupSlGitBranchColor()
 
     # change tabline color, see:
@@ -136,14 +137,22 @@ def g:LightlineTabRight(): list<list<string>>
 enddef
 # }}}
 
+# project name {{{ #
+def g:VcSlProjectName(): string
+    var name: string = g:VcProjectName()
+    return empty(name) ? '' : $' {name}'
+enddef
+# }}} project name #
+
 # {{{ filename
 def g:VcFilename(): string
     var fn = expand('%')
     if &ft == 'dirvish'
-        return fn == '/' ? fn : fnamemodify(fn, ':h:t')
+        return mPath.IsSamefile(fn, mPath.Parent(fn)) ? fn : mPath.Name(fn)
     else
         fn = fnamemodify(fn, ':t')
         fn = fn == '' ? "[No Name]" : fn
+        fn ..= &modified ? ' +' : (&modifiable ? '' : ' -')
         return fn
     endif
 enddef
@@ -184,12 +193,6 @@ enddef
 # }}}
 
 # {{{ lsp diag
-def SetupSlLspDiagColor(): void
-    'VcSlLspDiagError'->mHighlight.Combine('Red', 'VcSlB')
-    'VcSlLspDiagWarn'->mHighlight.Combine('Yellow', 'VcSlB')
-    'VcSlLspDiagInfo'->mHighlight.Combine('Blue', 'VcSlB')
-    'VcSlLspDiagHint'->mHighlight.Combine('Purple', 'VcSlB')
-enddef
 def g:VcSlLspDiagError(): string
     const count = lsp#lsp#ErrorCount().Error
     return count == 0 ? '' : $'{count}'
@@ -283,4 +286,5 @@ augroup VcSitePlugLightline
     endif
 
     au User LspProgressUpdate lightline#update()
+    au User VcProject lightline#update()
 augroup END
