@@ -64,6 +64,7 @@ augroup VcPluginCmp
     au!
     au VimEnter * mUtil.InitKindHighlightGroups()
     au VimEnter * mLsp.Setup()
+    au BufEnter * SetupInsTrigger()
     au FileType * SetupInsTrigger()
     au TextChangedI * InsComplete()
 augroup END
