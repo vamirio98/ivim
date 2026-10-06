@@ -282,7 +282,7 @@ enddef
 
 def g:VcProjectName(): string
     if !exists('g:thisSession')
-        return ''
+        return null_string
     endif
     return mIni.Read().info.name
 enddef
