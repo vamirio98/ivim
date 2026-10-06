@@ -28,14 +28,13 @@ export def Setup(): void
 enddef
 
 export def Completor(findstart: number, base: string): any
-    if !exists('*g:LspOmniFunc') || !exists('*g:LspServerRunning') ||
-            !g:LspServerRunning(&ft)
-        return -2  # cancel but stay in completion mode
+    if &l:omnifunc != 'g:LspOmniFunc'
+        return -2
     endif
 
     if findstart == 1
-        var index = g:LspOmniFunc(findstart, base)
-        return index
+        var startcol = g:LspOmniFunc(findstart, base)
+        return startcol
     endif
 
     var items = g:LspOmniFunc(findstart, base)
