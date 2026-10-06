@@ -24,6 +24,13 @@ inoremap <silent><expr> <Tab>   pumvisible() ? "\<C-n>" : "\<Tab>"
 inoremap <silent><expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
 
 # command line, :h cmdline-autocompletion
+# command line, :h cmdline-autocompletion {{{ #
+set wildmode=noselect:lastused,full
+set wildoptions=pum
+
+cnoremap <expr> <Up>   wildmenumode() ? "\<C-e>\<Up>"   : "\<Up>"
+cnoremap <expr> <Down> wildmenumode() ? "\<C-e>\<Down>" : "\<Down>"
+# }}} command line, :h cmdline-autocompletion #
 
 # fix auto-coplete no trigger when type '.' in c {{{ #
 # see: https://github.com/vim/vim/pull/17065#issue-2974794522
