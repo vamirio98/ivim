@@ -226,7 +226,8 @@ def g:VcSlLspStatus(): string
             parts->add(info.title)
         endif
         if info.percentage >= 0
-            parts->add(info.percentage .. '%')
+            # NOTE: escape '%'
+            parts->add(info.percentage .. '%%')
         endif
         return parts->join(' ')
     endfor
