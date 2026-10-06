@@ -52,5 +52,17 @@ The following functions are provides by this plugin.
 Get current project name, return `null_string` if no project opened.
 
 ==============================================================================
+							*project-autocmds*
+4. Autocommands~
+
+							*VcProjectPre*
+VcProjectPre			A |User| autocommand fired before saving
+				the project's session file.
+
+							*VcProject*
+VcProject			A |User| autocommand fired when the project's
+				session file saved/updated successfully.
+
+==============================================================================
 
 vim:tw=78:ts=8:noet:ft=help:norl:
