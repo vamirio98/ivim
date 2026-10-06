@@ -101,6 +101,7 @@ Plug 'sainnhe/gruvbox-material'
 IncScript site/plug/gruvbox_material.vim
 
 # Plug 'ryanoasis/vim-devicons'
+# Plug 'lambdalisue/vim-nerdfont'
 
 Plug 'luochen1990/rainbow'
 IncScript site/plug/rainbow.vim

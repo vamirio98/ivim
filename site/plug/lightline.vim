@@ -13,7 +13,13 @@ set hidden # allow buffer switching without saving
 set showtabline=2
 
 g:lightline#bufferline#filter_by_tabpage = 1
-g:lightline#bufferline#enable_devicons = 1
+g:lightline#bufferline#enable_devicons = 0
+g:lightline#bufferline#enable_nerdfont = 0
+g:lightline#bufferline#show_number = 2
+g:lightline#bufferline#ordinal_number_map = {
+    0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴',
+    5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹'
+}
 
 def g:LightlineBufferlineFilter(buffer: number): bool
     return getbufvar(buffer, '&buftype') !=# 'terminal'
@@ -259,6 +265,10 @@ nmap <leader>bh <Plug>lightline#bufferline#move_previous()
 nmap <leader>bl <Plug>lightline#bufferline#move_next()
 
 nmap <leader>br <Plug>lightline#bufferline#reset_order()
+for i in range(1, 9)
+    exec $'nmap <leader>{i} <Plug>lightline#bufferline#go({i})'
+    exec $'nmap <leader>bd{i} <Plug>lightline#bufferline#delete({i})'
+endfor
 # }}}
 
 augroup VcSitePlugLightline
