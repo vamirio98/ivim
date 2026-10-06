@@ -16,7 +16,7 @@ $FZF_DEFAULT_OPTS = [
     '--layout="default" --height=20',
 ]->join(' ')
 
-g:fzf_layout = { 'down': '50%' }
+# g:fzf_layout = { 'down': '50%' }
 # toggle preview window with <Ctrl-/>, show preview window on the right with
 # 50% width, but if the width is smaller than 70 columns, it will show above
 # the candidate list
