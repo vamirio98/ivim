@@ -8,13 +8,15 @@ g:vc_plugin_cmp_loaded = 1
 import autoload 'cmp/util.vim' as mUtil
 import autoload 'cmp/path.vim' as mPath
 import autoload 'cmp/lsp.vim' as mLsp
+import autoload 'cmp/abbr.vim' as mAbbr
 
 # insert mode
 set autocomplete
 set autocompletedelay=200
 set autocompletetimeout=1000
 # limit candidates from some sources to specific number (e.g., 5)
-set complete=FmLsp.Completor^10,FmPath.Completor,.,w,b^5,u^5,t,i
+set complete=FmLsp.Completor^10,FmPath.Completor,FmAbbr.Completor^5,
+set complete+=.,w,b^5,u^5,t,i
 set completeopt=menuone,noselect,popup
 set completepopup=border:round,close:off
 
