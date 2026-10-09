@@ -13,7 +13,7 @@ g:fzf_vim = get(g:, 'fzf_vim', {})
 $FZF_DEFAULT_OPTS = [
     '--preview-window="border-rounded" --prompt="> "',
     '--marker=">" --pointer=">" --separator="─" --scrollbar="│"',
-    '--layout="default" --height=20',
+    '--layout="reverse"',
 ]->join(' ')
 
 # g:fzf_layout = { 'down': '50%' }
