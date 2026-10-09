@@ -292,8 +292,13 @@ enddef
 if mPlug.Has('fzf.vim')
     def SearchProject(): void
         var hist: list<list<string>> = mHistory.Get()
+        var maxNameLen: number = 0
+        for x in hist
+            maxNameLen = max([maxNameLen, len(x[0])])
+        endfor
         var projs: list<string> = hist->mapnew((idx, val) => {
-            return $'[{idx}] {val[0]}'
+            var pad: number = maxNameLen - len(val[0]) + 10
+            return $'[{idx}] {val[0]}{repeat(' ', pad)}{val[1]}'
         })
         fzf#run(fzf#wrap({
             source: projs,
