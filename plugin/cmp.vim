@@ -21,7 +21,7 @@ set complete+=FmPath.Completor
 set complete+=FmUltisnips.Completor^5
 set complete+=FmAbbr.Completor^5,
 set complete+=.,w,b^5,u^5,t,i
-set completeopt=menuone,noselect,popup
+set completeopt=menuone,noselect,popup,nearest
 set completepopup=border:round,close:off
 
 inoremap <silent><expr> <Tab>   pumvisible() ? "\<C-n>" : "\<Tab>"
@@ -63,7 +63,8 @@ def SkipTextChangedIEvent(): string
     return ''
 enddef
 
-inoremap <silent> <c-e> <c-r>=<SID>SkipTextChangedIEvent()<cr><c-e>
+inoremap <silent> <C-e> <C-r>=<SID>SkipTextChangedIEvent()<cr><C-e>
+inoremap <silent> <C-y> <C-r>=<SID>SkipTextChangedIEvent()<cr><C-y>
 
 def SetupInsTrigger(): void
     if exists('b:insTrigger')
