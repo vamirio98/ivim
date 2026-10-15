@@ -5,7 +5,7 @@ const k_navigatorCharIcon: dict<string> = {
     " ": '󱁐',
     "\<tab>": '',
     "\<cr>": '󰘌',
-    "\<bs>": '󰌍',
+    "\<bs>": '',
     "\<up>": '󰁞',
     "\<down>": '󰁆',
     "\<left>": '󰁎',
@@ -18,7 +18,8 @@ def GetName(Value: any): string
     if t == v:t_list
         return Value[0]
     elseif t == v:t_dict
-        return get(Value, 'name', g:navigatorGroupName)
+        return printf("%s%s", g:navigatorGroupIcon,
+            get(Value, 'name', g:navigatorGroupName))
     elseif t == v:t_string
         return Value
     elseif t == v:t_func
@@ -35,7 +36,7 @@ enddef
 
 
 # key order: alpha, number, other
-def Compile(a_data: dict<any>): list<string>
+export def Compile(a_data: dict<any>): list<string>
     var data: list<string> = []
     for [k, V] in items(a_data)
         var text = printf("%s %s %s",
