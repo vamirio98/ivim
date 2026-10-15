@@ -158,7 +158,7 @@ def g:VcFilename(): string
     else
         fn = fnamemodify(fn, ':t')
         fn = fn == '' ? "[No Name]" : fn
-        fn ..= &modified ? ' +' : (&modifiable ? '' : ' -')
+        fn ..= (&readonly || !&modifiable) ? ' -' : (&modified ? ' +' : '')
         return fn
     endif
 enddef
