@@ -12,6 +12,7 @@ set laststatus=2
 set hidden # allow buffer switching without saving
 set showtabline=2
 
+g:lightline#bufferline#unnamed = '[No Name]'
 g:lightline#bufferline#filter_by_tabpage = 1
 g:lightline#bufferline#enable_devicons = 0
 g:lightline#bufferline#enable_nerdfont = 0
