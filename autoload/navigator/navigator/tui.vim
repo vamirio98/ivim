@@ -3,74 +3,105 @@ vim9script
 import autoload 'util/str.vim' as mStr
 
 
-# return image and index of the item following it
-def GenImage(a_items: list<string>, a_args: list<number>
-        ): tuple<list<string>, number>
-    var [start, w, h] = a_args
-    var colWidth: list<number> = []
-    var itemNum = len(a_items)
+def DoGenImage(items: list<string>, width: number, height: number,
+        a_start: number): tuple<list<string>, number>
+    var wPerCol: list<number> = []
+    var itemNum = len(items)
+    var start = a_start
+    var [tpad, rpad, bpad, lpad] = g:navigatorPadding
+    var hPerRow = height - tpad - bpad
 
-    var totalWidth: number = 0
+    var wTotal = lpad + rpad
     var [r, c] = [0, 0]
-    while start < itemNum && totalWidth < w
+    while start < itemNum && wTotal < width
         r = 0
-        var maxw: number = 0
-        while r < h && start < itemNum
-            maxw = max([maxw, mStr.DispLen(a_items[start])])
+        var maxw = 0
+        while r < hPerRow && start < itemNum
+            maxw = max([maxw, mStr.DispLen(items[start])])
             start += 1
             r += 1
         endwhile
-        colWidth->add(maxw)
-        totalWidth += (c > 0 ? g:navigatorSpacing : 0) + maxw
+        wPerCol->add(maxw)
+        wTotal += (c > 0 ? g:navigatorSpacing : 0) + maxw
         c += 1
     endwhile
 
-    var image: list<string> = []
-    var endup: number = start
-    start = a_args[0]
+    var image: list<string> = [' '->repeat(width)]->repeat(tpad)
+    var endup = start
+    start = a_start
     itemNum = endup - start
-    var colNum = len(colWidth)
-    for i in range(h)
-        var line: string = ''
-        for j in range(colNum)
-            var index = i + j * h
+    for i in range(hPerRow)
+        var line = ' '->repeat(lpad)
+        for j in range(len(wPerCol))
+            var index = i + j * hPerRow
             if index >= endup
                 break
             endif
-            line ..= (j > 0 ? repeat(' ', g:navigatorSpacing) : '') ..
-                a_items[index] ..
-                repeat(' ', colWidth[j] - mStr.DispLen(a_items[index]))
+            line ..= (j > 0 ? ' '->repeat(g:navigatorSpacing) : '') ..
+                items[index] ..
+                ' '->repeat(wPerCol[j] - mStr.DispLen(items[index]))
         endfor
-        if empty(line)
+        if len(line) == lpad
             break
         endif
-        image->add(line)
+        image->add(line .. ' '->repeat(rpad))
     endfor
     return (image, endup)
 enddef
 
 
-export def Open(a_items: list<string>, a_opts: dict<any> = {}): number
-    var w: number = float2nr(g:navigatorPopupWidth * &columns)
-    var h: number = float2nr(g:navigatorPopupHeight * &lines)
-    var images: list<list<string>> = []
-
-    var itemNum = len(a_items)
+# return image and index of the item following it
+def GenImage(items: list<string>, a_path: string): list<string>
+    var w = float2nr(g:navigatorPopupWidth * &columns)
+    var h = float2nr(g:navigatorPopupHeight * &lines)
+    var subImg: list<list<string>> = []
+    var itemNum = len(items)
     var start = 0
     while start < itemNum
-        var [image, endup] = GenImage(a_items, [start, w, h - 1])
-        images->add(image)
+        # height min 1 for footnote
+        var [img, endup] = DoGenImage(items, w, h - 1, start)
+        subImg->add(img)
         start = endup
     endwhile
-    var wid = popup_create(images[0], {
-        line: &lines,
+
+    var image: list<string> = []
+    var imgNum = len(subImg)
+    for i in range(imgNum)
+        var lfootnote = printf("Navigator (page %d/%d): %s", i, imgNum, a_path)
+        var rfootnote = "(C-j/k: paging, BS: return, ESC: quit)"
+        subImg[i]->add(printf("%s%s%s", lfootnote,
+            ' '->repeat(w - mStr.DispLen(lfootnote) - mStr.DispLen(rfootnote)),
+            rfootnote))
+        image += subImg[i]
+    endfor
+
+    return image
+enddef
+
+
+def Filter(winid: number, key: string): bool
+    if key == "\<esc>" || key == "\<C-c>"
+        popup_close(winid)
+        return 1
+    endif
+    return 0
+enddef
+
+
+export def Open(a_items: list<string>, a_opts: dict<any> = {}): number
+    var image = GenImage(a_items, 'k')
+    var w = float2nr(g:navigatorPopupWidth * &columns)
+    var h = float2nr(g:navigatorPopupHeight * &lines)
+
+    var wid = popup_create(image, {
+        line: &lines - 2,
         col: (&columns - w) / 2,
         pos: 'botleft',
         minwidth: w,
         minheight: h,
         maxwidth: w,
         maxheight: h,
-        padding: g:navigatorPadding,
+        filter: Filter,
     })
     return wid
 enddef
