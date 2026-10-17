@@ -93,7 +93,7 @@ export def Open(a_items: list<string>, a_opts: dict<any> = {}): number
     var w = float2nr(g:navigatorPopupWidth * &columns)
     var h = float2nr(g:navigatorPopupHeight * &lines)
 
-    var wid = popup_create(image, {
+    var winid = popup_create(image, {
         line: &lines - 2,
         col: (&columns - w) / 2,
         pos: 'botleft',
@@ -103,7 +103,8 @@ export def Open(a_items: list<string>, a_opts: dict<any> = {}): number
         maxheight: h,
         filter: Filter,
     })
-    return wid
+    win_execute(winid, 'set ft=navigator')
+    return winid
 enddef
 
 
@@ -113,7 +114,7 @@ if 0
     var items = {
         'a': 'apple', 'b': 'banana', 'c': 'code', 'd': 'decide', 'e': 'eight',
         'f': 'first', 'g': 'google', 'h': 'hello', 'i': 'initialize',
-        'j': 'join', 'k': 'key'
+        'j': 'join', 'k': 'key', 'l': { 'a': 'a' }, 'm': { 'name': 'group' },
     }
     Open(mItem.Compile(items))
 endif
