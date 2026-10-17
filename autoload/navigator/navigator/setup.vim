@@ -6,17 +6,14 @@ def Root(visual: bool, buffer: bool): dict<any>
         if !buffer
             return g:navigator
         endif
-        if !exists('b:navigator')
-            b:navigator = {}
-        endif
+        b:navigator = exists('b:navigator') ? b:navigator : {}
         return b:navigator
     else
         if !buffer
             return g:navigatorVisual
         endif
-        if !exists('b:navigatorVisual')
-            b:navigatorVisual = {}
-        endif
+        b:navigatorVisual = exists('b:navigatorVisual') ?
+            b:navigatorVisual : {}
         return b:navigatorVisual
     endif
 enddef
