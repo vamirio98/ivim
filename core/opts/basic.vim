@@ -134,3 +134,9 @@ set foldtext=foldtext()
 # use trailing '//' to make the swapfile name built from the complete path
 # to the file with all path separators substituted to percent '%' signs
 exec 'set directory=' .. g:vcSwapfileDir .. '//'
+
+if has('gui_running') ||
+        has('xterm_clipboard') || has('wayland_clipboard') ||
+        has('clipboard_provider')
+    set clipboard^=unnamed
+endif
