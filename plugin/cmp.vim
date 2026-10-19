@@ -1,6 +1,8 @@
 vim9script
 
-if get(g:, 'vcPluginCmpLoaded', 0)
+import autoload 'tool/plug.vim' as mPlug
+
+if get(g:, 'vcPluginCmpLoaded', 0) || mPlug.Has('coc.nvim')
     finish
 endif
 g:vcPluginCmpLoaded = 1

@@ -38,8 +38,10 @@ IncScript site/plug/ultisnips.vim
 
 Plug 'sbdchd/neoformat'
 IncScript site/plug/neoformat.vim
-Plug 'yegappan/lsp'
-IncScript site/plug/lsp.vim
+# Plug 'yegappan/lsp'
+# IncScript site/plug/lsp.vim
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
+IncScript site/plug/coc.vim
 
 
 #---------------------------------------------------------------

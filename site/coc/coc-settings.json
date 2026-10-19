@@ -1,0 +1,20 @@
+{
+    "diagnostic.errorSign": "",
+    "diagnostic.warningSign": "",
+    "diagnostic.infoSign": "󰋼",
+    "diagnostic.hintSign": "󰌵",
+    "suggest.noselect": true,
+    "suggest.enablePreselect": false,
+    "highlight.colorNames.enable": false,
+    "highlight.colors.enable": false,
+    "colors.enable": false,
+    "codeLens.enable": true,
+    "semanticTokens.enable": true,
+    "languageserver": {
+        "clangd": {
+            "command": "clangd",
+            "rootPatterns": ["compile_flags.txt", "compile_commands.json"],
+            "filetypes": ["c", "cc", "cpp", "c++", "objc", "objcpp"]
+        }
+    }
+}

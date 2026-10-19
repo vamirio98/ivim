@@ -2,6 +2,7 @@ vim9script
 
 import autoload "util/msg.vim" as mMsg
 import autoload 'util/path.vim' as mPath
+import autoload 'tool/plug.vim' as mPlug
 
 import autoload 'tui/highlight.vim' as mHighlight
 
@@ -45,10 +46,10 @@ g:lightline.active = {
         [
             'vcProjectName',
             'gitBranch',
-            'lspDiagError', 'lspDiagWarn',
+            # 'lspDiagError', 'lspDiagWarn',
             # 'lspDiagInfo', 'lspDiagHint',
-            # 'cocError', 'cocWarn',
-            'lspStatus',
+            'cocError', 'cocWarn',
+            # 'lspStatus',
             'vcFilename'
         ],
     ],
@@ -77,15 +78,15 @@ g:lightline.component_expand = {
     'rtabs': 'g:LightlineTabRight',
     'gutentags': "g:VcSlTags",
     'gitSummary': "g:VcSlGitSummary",
-    'lspDiagError': 'g:VcSlLspDiagError',
-    'lspDiagWarn': 'g:VcSlLspDiagWarn',
-    'lspDiagInfo': 'g:VcSlLspDiagInfo',
-    'lspDiagHint': 'g:VcSlLspDiagHint',
-    'lspStatus': 'g:VcSlLspStatus',
+    # 'lspDiagError': 'g:VcSlLspDiagError',
+    # 'lspDiagWarn': 'g:VcSlLspDiagWarn',
+    # 'lspDiagInfo': 'g:VcSlLspDiagInfo',
+    # 'lspDiagHint': 'g:VcSlLspDiagHint',
+    # 'lspStatus': 'g:VcSlLspStatus',
+    'cocError': 'g:VcSlCocError',
+    'cocWarn': 'g:VcSlCocWarn',
     'gitBranch': 'g:VcSlGitBranch',
     'vcProjectName': 'g:VcSlProjectName',
-    # 'cocError': 'g:VcSlCocError',
-    # 'cocWarn': 'g:VcSlCocWarn',
 }
 
 # specify the component_expand color
@@ -94,8 +95,8 @@ g:lightline.component_type = {
     'rtabs': 'tabsel',
     'cocError': 'error',
     'cocWarn': 'warning',
-    'lspDiagError': 'error',
-    'lspDiagWarn': 'warning',
+    # 'lspDiagError': 'error',
+    # 'lspDiagWarn': 'warning',
 }
 
 # g:lightline.component_raw = {
@@ -238,13 +239,13 @@ enddef
 
 # {{{ coc-status
 def g:VcSlCocError(): string
-    var errorSign: string = get(g:, 'coc_status_error_sign', ' ')
+    var errorSign: string = get(g:, 'coc_status_error_sign', '')
     var info = get(b:, 'coc_diagnostic_info', {})
     var errorNum: number = get(info, 'error', 0)
     return errorNum == 0 ? '' : printf("%s%d", errorSign, errorNum)
 enddef
 def g:VcSlCocWarn(): string
-    var warnSign: string = get(g:, 'coc_status_warning_sign', ' ')
+    var warnSign: string = get(g:, 'coc_status_warning_sign', '')
     var info = get(b:, 'coc_diagnostic_info', {})
     var warnNum: number = get(info, 'warning', 0)
     return warnNum == 0 ? '' : printf("%s%d", warnSign, warnNum)
@@ -277,12 +278,12 @@ augroup VcSitePlugLightline
     au!
     # wait for colorscheme loaded
     au VimEnter * SetupColor()
-    # if plug.Has('coc.nvim')
-    #   au User CocStatusChange lightline#update()
-    # endif
+    if mPlug.Has('coc.nvim')
+        au User CocStatusChange lightline#update()
+    endif
     # if plug.Has('vim-gutentags')
-    #   au User GutentagsUpdating lightline#update()
-    #   au User GutentagsUpdated lightline#update()
+    #     au User GutentagsUpdating lightline#update()
+    #     au User GutentagsUpdated lightline#update()
     # endif
     au FileType dirvish lightline#update()
     au User GitGutter lightline#update()
@@ -297,6 +298,8 @@ augroup VcSitePlugLightline
             | mMsg.Error('cannot refresh bufferline') | endif
     endif
 
-    au User LspProgressUpdate lightline#update()
+    if mPlug.Has('lsp')
+        au User LspProgressUpdate lightline#update()
+    endif
     au User VcProject lightline#update()
 augroup END
