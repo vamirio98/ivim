@@ -13,7 +13,7 @@
     "semanticTokens.enable": true,
     "inlayHint.enable": false,
 
-    "codeLens.enable": true,
+    "codeLens.enable": false,
 
     "vimls.command": "vimls",
 
